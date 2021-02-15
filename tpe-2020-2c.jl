@@ -381,7 +381,7 @@ let
 	sh= 501;
 	
 	normalize(x) = x ./ sum(x);
-	log_fft(win) =	 plot(log.(abs.(fft(padright(normalize(win(41)), 501)))));
+	log_fft(win) =	 plot(log.(abs.(fft(padright(normalize(win(n)), sh)))));
 	
 	plot(log_fft(ones), log_fft(hamming),
 		label= ["ventana" "hamming"],
@@ -389,14 +389,11 @@ let
    		xlims=(0, 250), ylims=(-15, 2), 
 		ylabel="Amplitud (dB)"
 	)
-#es necesiario pasar a omega?...dividir por fm.
+#es necesiario pasar a omega?...omega = (2.pi.k)/N.
 end
 
 # ╔═╡ eca8b002-6f35-11eb-2ef7-c1d8fb43e4cb
 specplot(tst)
-
-# ╔═╡ f1f1fd50-6f35-11eb-10cb-fffac18caf59
-a
 
 # ╔═╡ 4db2d110-6f30-11eb-187f-d36624b5dbfa
 md""" Se puede observar la diferencia entre los lobulos secundarios entre la ventana ideal y la de hamming, la relacion entre el primer lobulo y el segundo es mucho mejor con hamming."""
@@ -408,7 +405,87 @@ md"""
 """
 
 # ╔═╡ 4c56bc6c-3ea4-11eb-01e7-7b26c1d054f0
+#plot(10log10.(fftshift(abs.(fft(tst)))))
 
+# ╔═╡ 288dc2a0-6fa8-11eb-0f59-81c9f9871214
+md""" La velocidad de muestreo puede ser reducida por un factor entero M= 8, haciendo una decimacion de la señal discreta generando una nueva secuencia $x_d[n]$.
+			$x_d[n] = x_d[m * M]= x_c[n*MT]$,
+con T:periodo de muestreo.
+
+En el espectro esto se puede ver con amplitud 1/N y ancho de banda desde $-M.\Omega_m$   a $-M.\Omega_m$ entonces la reduccion en frecuencia de muestreo puede generar un traslape para $\Omega_N > \pi/M$.
+
+Por ello para no perder informacion se realiza un filtro anti-aliasin antes del submuestreo.
+"""
+
+# ╔═╡ b09a2b70-6fcb-11eb-344e-abf9e54cb366
+let
+	img_path = "decimador.png"
+	img = load(img_path)
+end
+
+# ╔═╡ 596ad140-6fd2-11eb-11ba-b542ccbd645e
+
+
+# ╔═╡ d3f093f0-6fcd-11eb-0683-2352d0d55bbc
+begin
+	PI= 3.14159265;
+	fc= 2756; 					#frecuencia de corte(hz) fc < fs/2 = 44100/2.
+	OmegaC = (2*PI*fc)/sr;
+end
+
+# ╔═╡ 5b221e30-6fd2-11eb-054b-518034184d4a
+begin
+	H_ideal(Ω) = u(Ω + OmegaC) - u(Ω - OmegaC)
+	plot(H_ideal, -π, π)
+
+end
+
+# ╔═╡ 6bcd16f0-6fc7-11eb-3e01-6747e7351a51
+h_ideal(n, OmegaC) = (OmegaC/PI) * sinc(n *(OmegaC/PI))	#Omega = 2pi/fm
+
+# ╔═╡ 95d5127e-6fcd-11eb-2770-3b888691f1ec
+let ns = -40:40	
+  	stem(ns, h_ideal.(ns,OmegaC))
+	
+end
+
+# ╔═╡ e752c6d0-6fa9-11eb-2ebd-19c22fe34d5c
+function submuestrear(x,M)
+  y = zeros(length(x)*M) 					#me creo un vector para rellenar
+  [y[1 + M*(i-1)]= x[i] for i=1:length(x)] 	# aca hago inline loops :)
+  return y
+end
+
+# ╔═╡ acee07a0-6fb0-11eb-2a65-5d76cb22034b
+#fvtol     t=muestras/FS
+
+# ╔═╡ 3f345a30-6fc8-11eb-2a37-95cb5d649423
+begin
+	order = 231;
+	ns    = range(-(order - 1) / 2; length=order);
+	winds = hamming(order);
+	hs    = h_ideal.(ns,OmegaC) .* winds;
+	
+	stem(0:order-1, hs)
+end
+
+# ╔═╡ 2ea03a40-6fd2-11eb-3a3a-1f34c6888318
+let
+  samples = 500
+  hfs = fft(padright(hs, samples))
+  fs = range(0; step=2pi/samples, length=samples)
+  
+  plot(fs, abs.(hfs); xlims=(0, π))
+  plot!(H_ideal, 0, π)
+end
+
+# ╔═╡ 9e1b3d62-6fd3-11eb-3738-17d34b356dfe
+#aca reduciomos tst en sr/8.
+#tst_8 = let nss = 1:length(tst)
+#	p1 = tst .* h_ideal.(nss,OmegaC) .* winds;
+#	submuestrear(p1.* winds,8)
+	
+#end
 
 # ╔═╡ af4f3da4-3e67-11eb-3cc6-3378e0c12667
 md"""
@@ -416,9 +493,6 @@ md"""
 
 **Realice un espectrograma de la señal original y la filtrada y verifique los efectos del filtrado. Indique el tipo y longitud de ventana utilizada.**
 """
-
-# ╔═╡ 3aa5434e-3ea4-11eb-20aa-b15564d4eb90
-
 
 # ╔═╡ 982538c4-3e67-11eb-229e-dd2531a540d6
 md"""
@@ -737,7 +811,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 """
 
 # ╔═╡ Cell order:
-# ╠═09062294-3e5f-11eb-176f-dfcbf841f111
+# ╟─09062294-3e5f-11eb-176f-dfcbf841f111
 # ╟─8f1394ee-3e63-11eb-0093-e75468460dc5
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
@@ -765,12 +839,22 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═0ae0430e-6d76-11eb-34c4-7b4ab551f242
 # ╠═4e904a84-3ea4-11eb-0c12-b1fccd5f7036
 # ╠═eca8b002-6f35-11eb-2ef7-c1d8fb43e4cb
-# ╠═f1f1fd50-6f35-11eb-10cb-fffac18caf59
 # ╟─4db2d110-6f30-11eb-187f-d36624b5dbfa
 # ╟─b2025250-3e67-11eb-39a2-73292bbf17c9
 # ╠═4c56bc6c-3ea4-11eb-01e7-7b26c1d054f0
+# ╟─288dc2a0-6fa8-11eb-0f59-81c9f9871214
+# ╟─b09a2b70-6fcb-11eb-344e-abf9e54cb366
+# ╠═596ad140-6fd2-11eb-11ba-b542ccbd645e
+# ╠═d3f093f0-6fcd-11eb-0683-2352d0d55bbc
+# ╠═5b221e30-6fd2-11eb-054b-518034184d4a
+# ╠═6bcd16f0-6fc7-11eb-3e01-6747e7351a51
+# ╠═95d5127e-6fcd-11eb-2770-3b888691f1ec
+# ╠═e752c6d0-6fa9-11eb-2ebd-19c22fe34d5c
+# ╠═acee07a0-6fb0-11eb-2a65-5d76cb22034b
+# ╠═3f345a30-6fc8-11eb-2a37-95cb5d649423
+# ╠═2ea03a40-6fd2-11eb-3a3a-1f34c6888318
+# ╠═9e1b3d62-6fd3-11eb-3738-17d34b356dfe
 # ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
-# ╠═3aa5434e-3ea4-11eb-20aa-b15564d4eb90
 # ╟─982538c4-3e67-11eb-229e-dd2531a540d6
 # ╠═39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
 # ╟─9309e284-3e67-11eb-1ab2-612f6c748c3b
