@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.17
+# v0.12.20
 
 using Markdown
 using InteractiveUtils
@@ -12,6 +12,113 @@ macro bind(def, element)
         el
     end
 end
+
+# ╔═╡ 8f1394ee-3e63-11eb-0093-e75468460dc5
+md"# Trabajo Práctico Especial de Señales y Sistemas"
+
+# ╔═╡ 7c04611e-3e61-11eb-0aa5-eb97132ace53
+html"""
+<h2 class="pm-node nj-subtitle">Identificación de canciones mediante huellas digitales acústicas</h2>
+"""
+
+# ╔═╡ adc46380-3e63-11eb-2422-5bfe1b5052ba
+md"""
+# Introducción
+
+Imaginen la siguiente situación: se encuentran en un bar, tomando su trago favorito, inmersos en esa interesante conversación cuando de repente . . .  “pará, pará, ¿qué es eso que suena?”. Entre el ruido general alcanzan a distinguir esa canción que no escuchaban en tanto tiempo, que habían obsesivamente intentado encontrar pero que, a pesar de ello, nunca llegaron a dar siquiera con el nombre del intérprete. Su corazón se estremece . . .  Ahora que la tienen ahí, sonando nuevamente, la situación es bien diferente a la de hace algunos años: toman su teléfono celular, abren alguna de las aplicaciones de reconocimiento de audio que tienen y, en cuestión de segundos, aparece la información completa del tema, la banda, ¡e incluso se atreve a sugerir artistas similares!
+
+Si el protagonista de esta ficción fuera estudiante de Señales y Sistemas, no debería extrañarnos que surjan en él varios interrogantes: ¿cómo hizo el programa para reconocer la canción escuchando sólo 10 segundos?, ¿cómo puede funcionar con el ruido de un bar de fondo? y ¿cómo pudee ser que además identifique tan rápido a seta banda que nadie conoce?
+
+Resulta que todo este proceso se basa en reconocer *huellas digitales acústicas*, una técnica robusta y eficiente que puede entenderse en términos de Señales y Sistemas.
+
+## Reconocimiento mediante huellas digitales acústicas
+
+El reconocimiento de audio mediante huellas digitales acústicas es una técnica que busca identificar una pieza de audio, contrastando la información contenida en dicha pieza contra la almacenada en una base de datos de pistas conocidas. Esta técnica comienza a desarrollarse desde el año 2000, pero es durante la última década que tomé mayor impulso, siendo posible hoy en día encontrar una variedad de aplicaciones para smartphones capaces de identificar casi cualquier pieza de audio en segundos \[4\].
+
+Existen varias formas dea bordar el problema del reconocimiento, pero todas persiguen la misma finalidad:
+
+* Simplicidad computacional: el reconocimiento debe realizarse en forma rápida.
+* Eficiencia en el uso de memoria y buena capacidad de discriminación: existen aproximadamente 100 millones de canciones grabadas \[1\].
+* Robustez ante degradaciones: ruido de fondo, degradación por compresión digital del audio, ecualización por respuesta en frecuencia no plana del lugar y/o parlantes, etc.
+* Granularidad: capacidad de reconocimiento utilizando sólo un segmento del audio.
+* Alta tasa de aciertos, baja tasa de falsos positivos y de rechazos.
+
+El procedimiento básico consiste en analizar el segmento de audio buscando extraer características particulares en el esapcio tiempo-frecuencia (es decir, en su espectrograma) que sirvan para identificarlo luego. Una característica podría ser, por ejemplo, la potencia que posean las diferentes bandas de frecuencias. Al conjunto de estas características se las denomina *huella digital acústica*.
+
+![sys-tpe1.png](https://i.imgur.com/FoKz8Tw.png)
+
+Este procedimiento de extracción de huellas se utiliza tanto para confeccionar la base de datos de canciones conocidas como para posteriormente reconocer segmentos de audio que se desean identificar consultando la base de datos. 
+
+La elección de las características es la base del funcionamiento del método. Deben ser lo suficientemente específicas como para identificar a cada canción unívocamente pero a la vez ocupar poca memoria para permitir realizar la búsqueda en forma rápida y eficiente. También deberán ser relativamente inmunes ante ruidos y distorsiones del audio de manera de lograr un sistema de reconocimiento robusto. 
+
+Diferentes características han sido propuestas con el fin de lograr estas especificaciones. Algunos ejemplos que se extraen del dominio tiempo-frecuencia son los MFCC \[4\] (Mel-Frequency Cepstrum Coefficients, comúnmente utilizados para la representación del habla), SFM \[1\] (Spectral Flatness Measure, una estimación de cuánto se aproxima una banda espectral a ser un tono o ruido), la ubicación de los picos de potencia del espectrograma (la base del algoritmo de Shazam \[9, 8\]), la energía de las bandas \[6\], etc. Además del espectrograma, otras técnicas se han utilizados como *wavelets* y algoritmos de visión \[2\], algoritmos de machine learning \[3\], y meta-características \[7\], útiles en grabaciones muy distorsionadas. 
+
+En este trabajo desarrollaremos una implementación simple que utiliza como características el signo de la diferencia de energía entre bandas \[5\]. 
+
+Cabe destacar que esta característica sólo sirve para reconocer las mismas versiones de las canciones que se almacenan en la base de datos: es decir, no está diseñada para reconocer versiones en vivo o interpretaciones diferentes a la original.
+
+# Descripción del sistema de reconocimiento
+
+El sistema de reconocimiento consta de dos bloques principales:
+
+1. El algoritmo para extraer las huellas digitales acústicas.
+2. La base de datos que almacena las huellas acústicas de las canciones conocidas y permite realizar búsquedas a partir de la huella acústica de una canción desconocida.
+
+El algoritmo para extraer las huellas acústicas toma como entrada el archivo con el audio, lo pre-procesa, extrae las características, y entrega como resultado la huella acústica.
+
+
+![sys-tpe2.png](https://cdn.nextjournal.com/data/QmRYiHJKoMuXyNybtpYDvExYoxBiwoA4dHQei9Quar5Sit?filename=sys-tpe2.png&content-type=image/png)
+
+La base de datos guardará las huellas acústicas de las canciones conocidas. Tiene además un sistema de búsqueda (en inglés query) tal que al realizar un query con una huella acústica dada nos devuelve la canción – más probable – a la cual correseponde.
+
+El esquema del sistema completo se presenta a continuación:
+
+![sys-tpe3.png](https://cdn.nextjournal.com/data/QmYQPVLaSUHo9XBXL2m3HqMnbA2QAY9jWg7VqoFeby8N77?filename=sys-tpe3.png&content-type=image/png)
+
+Observe que el algoritmo de extracción de huellas se utiliza tanto en la creación de la base de datos de canciones conocidas como para el reconocimiento de audios desconocidos.
+
+## Algoritmo de extracción de huellas digitales acústicas
+
+El algoritmo de extracción de huellas acústicas tiene como finalidad extraer características a partir del espectrograma del audio. Primeramente, se acondiciona el audio con un pre-procesamiento. Luego se realiza un espectrograma del audio pre-procesado y finalmente se extraen las características para cada intervalo de tiempo.
+
+### 1. Pre-procesamiento del audio
+
+Se comienza convirtiendo el audio, que suele ser estar en estéreo, a un audio monocanal, promediando los canales. 
+
+Luego, se reduce su frecuencia de muestreo, aprovechando que son las frecuencias bajas las que contienen la información más útil para la extracción de características. En general, el audio está muestreado a 44100 Hz (calidad de CD), pero para este algoritmo de reconocimiento basta con tenerlo muestreado a 1/8 de su frecuencia original, 5512.5 Hz. Esto permite trabajar con menos muestras, aliviando la carga computacional. Para realizar los siguientes ejercicios, utilice el archivo `Pink.ogg`.
+
+#### Ejercicio 1)
+
+**Cargue la pista de audio. Verifique que la variable cargada es una matriz con 2 columnas, cada una correspondiendo a un canal de audio. Promedie los canales utilizando al función mean para tener 1 solo canal y grafique una porción de la señal resultante. Escuche el audio resultante para verificar el resultado.**
+"""
+
+# ╔═╡ a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
+# La frecuencia de muestreo está fija a 44100 Hz
+const sr = 44100
+
+# ╔═╡ d132a762-3ea3-11eb-3494-692576a31f34
+function load_audio(fn)
+	
+    xraw = load(fn)
+	
+	# Chequeo que la frecuencia de muestreo sea "sr = 44100hz"
+    @assert samplerate(xraw) == sr  samplerate(xraw) 
+
+    return collect(xraw)
+end
+
+# ╔═╡ 3da199b0-6b3d-11eb-04e6-fff2ac06d553
+#toma un audio (.ogg) de dos canales, los promedia a un solo canal.
+function to_mono(fn) 
+  
+  stereo = load_audio(fn)
+  mono = vec( mean(stereo, dims=2) )
+  
+  return mono #collect(mono)
+end
+
+# ╔═╡ 53a1ecb0-6b3d-11eb-1f24-55b65316c313
+x = to_mono("Pink.ogg")   #..maldita vida...
 
 # ╔═╡ 09062294-3e5f-11eb-176f-dfcbf841f111
 begin
@@ -160,103 +267,35 @@ begin
 
 end;
 
-# ╔═╡ 8f1394ee-3e63-11eb-0093-e75468460dc5
-md"# Trabajo Práctico Especial de Señales y Sistemas"
-
-# ╔═╡ 7c04611e-3e61-11eb-0aa5-eb97132ace53
-html"""
-<h2 class="pm-node nj-subtitle">Identificación de canciones mediante huellas digitales acústicas</h2>
-"""
-
-# ╔═╡ adc46380-3e63-11eb-2422-5bfe1b5052ba
-md"""
-# Introducción
-
-Imaginen la siguiente situación: se encuentran en un bar, tomando su trago favorito, inmersos en esa interesante conversación cuando de repente . . .  “pará, pará, ¿qué es eso que suena?”. Entre el ruido general alcanzan a distinguir esa canción que no escuchaban en tanto tiempo, que habían obsesivamente intentado encontrar pero que, a pesar de ello, nunca llegaron a dar siquiera con el nombre del intérprete. Su corazón se estremece . . .  Ahora que la tienen ahí, sonando nuevamente, la situación es bien diferente a la de hace algunos años: toman su teléfono celular, abren alguna de las aplicaciones de reconocimiento de audio que tienen y, en cuestión de segundos, aparece la información completa del tema, la banda, ¡e incluso se atreve a sugerir artistas similares!
-
-Si el protagonista de esta ficción fuera estudiante de Señales y Sistemas, no debería extrañarnos que surjan en él varios interrogantes: ¿cómo hizo el programa para reconocer la canción escuchando sólo 10 segundos?, ¿cómo puede funcionar con el ruido de un bar de fondo? y ¿cómo pudee ser que además identifique tan rápido a seta banda que nadie conoce?
-
-Resulta que todo este proceso se basa en reconocer *huellas digitales acústicas*, una técnica robusta y eficiente que puede entenderse en términos de Señales y Sistemas.
-
-## Reconocimiento mediante huellas digitales acústicas
-
-El reconocimiento de audio mediante huellas digitales acústicas es una técnica que busca identificar una pieza de audio, contrastando la información contenida en dicha pieza contra la almacenada en una base de datos de pistas conocidas. Esta técnica comienza a desarrollarse desde el año 2000, pero es durante la última década que tomé mayor impulso, siendo posible hoy en día encontrar una variedad de aplicaciones para smartphones capaces de identificar casi cualquier pieza de audio en segundos \[4\].
-
-Existen varias formas dea bordar el problema del reconocimiento, pero todas persiguen la misma finalidad:
-
-* Simplicidad computacional: el reconocimiento debe realizarse en forma rápida.
-* Eficiencia en el uso de memoria y buena capacidad de discriminación: existen aproximadamente 100 millones de canciones grabadas \[1\].
-* Robustez ante degradaciones: ruido de fondo, degradación por compresión digital del audio, ecualización por respuesta en frecuencia no plana del lugar y/o parlantes, etc.
-* Granularidad: capacidad de reconocimiento utilizando sólo un segmento del audio.
-* Alta tasa de aciertos, baja tasa de falsos positivos y de rechazos.
-
-El procedimiento básico consiste en analizar el segmento de audio buscando extraer características particulares en el esapcio tiempo-frecuencia (es decir, en su espectrograma) que sirvan para identificarlo luego. Una característica podría ser, por ejemplo, la potencia que posean las diferentes bandas de frecuencias. Al conjunto de estas características se las denomina *huella digital acústica*.
-
-![sys-tpe1.png](https://i.imgur.com/FoKz8Tw.png)
-
-Este procedimiento de extracción de huellas se utiliza tanto para confeccionar la base de datos de canciones conocidas como para posteriormente reconocer segmentos de audio que se desean identificar consultando la base de datos. 
-
-La elección de las características es la base del funcionamiento del método. Deben ser lo suficientemente específicas como para identificar a cada canción unívocamente pero a la vez ocupar poca memoria para permitir realizar la búsqueda en forma rápida y eficiente. También deberán ser relativamente inmunes ante ruidos y distorsiones del audio de manera de lograr un sistema de reconocimiento robusto. 
-
-Diferentes características han sido propuestas con el fin de lograr estas especificaciones. Algunos ejemplos que se extraen del dominio tiempo-frecuencia son los MFCC \[4\] (Mel-Frequency Cepstrum Coefficients, comúnmente utilizados para la representación del habla), SFM \[1\] (Spectral Flatness Measure, una estimación de cuánto se aproxima una banda espectral a ser un tono o ruido), la ubicación de los picos de potencia del espectrograma (la base del algoritmo de Shazam \[9, 8\]), la energía de las bandas \[6\], etc. Además del espectrograma, otras técnicas se han utilizados como *wavelets* y algoritmos de visión \[2\], algoritmos de machine learning \[3\], y meta-características \[7\], útiles en grabaciones muy distorsionadas. 
-
-En este trabajo desarrollaremos una implementación simple que utiliza como características el signo de la diferencia de energía entre bandas \[5\]. 
-
-Cabe destacar que esta característica sólo sirve para reconocer las mismas versiones de las canciones que se almacenan en la base de datos: es decir, no está diseñada para reconocer versiones en vivo o interpretaciones diferentes a la original.
-
-# Descripción del sistema de reconocimiento
-
-El sistema de reconocimiento consta de dos bloques principales:
-
-1. El algoritmo para extraer las huellas digitales acústicas.
-2. La base de datos que almacena las huellas acústicas de las canciones conocidas y permite realizar búsquedas a partir de la huella acústica de una canción desconocida.
-
-El algoritmo para extraer las huellas acústicas toma como entrada el archivo con el audio, lo pre-procesa, extrae las características, y entrega como resultado la huella acústica.
-
-
-![sys-tpe2.png](https://cdn.nextjournal.com/data/QmRYiHJKoMuXyNybtpYDvExYoxBiwoA4dHQei9Quar5Sit?filename=sys-tpe2.png&content-type=image/png)
-
-La base de datos guardará las huellas acústicas de las canciones conocidas. Tiene además un sistema de búsqueda (en inglés query) tal que al realizar un query con una huella acústica dada nos devuelve la canción – más probable – a la cual correseponde.
-
-El esquema del sistema completo se presenta a continuación:
-
-![sys-tpe3.png](https://cdn.nextjournal.com/data/QmYQPVLaSUHo9XBXL2m3HqMnbA2QAY9jWg7VqoFeby8N77?filename=sys-tpe3.png&content-type=image/png)
-
-Observe que el algoritmo de extracción de huellas se utiliza tanto en la creación de la base de datos de canciones conocidas como para el reconocimiento de audios desconocidos.
-
-## Algoritmo de extracción de huellas digitales acústicas
-
-El algoritmo de extracción de huellas acústicas tiene como finalidad extraer características a partir del espectrograma del audio. Primeramente, se acondiciona el audio con un pre-procesamiento. Luego se realiza un espectrograma del audio pre-procesado y finalmente se extraen las características para cada intervalo de tiempo.
-
-### 1. Pre-procesamiento del audio
-
-Se comienza convirtiendo el audio, que suele ser estar en estéreo, a un audio monocanal, promediando los canales. 
-
-Luego, se reduce su frecuencia de muestreo, aprovechando que son las frecuencias bajas las que contienen la información más útil para la extracción de características. En general, el audio está muestreado a 44100 Hz (calidad de CD), pero para este algoritmo de reconocimiento basta con tenerlo muestreado a 1/8 de su frecuencia original, 5512.5 Hz. Esto permite trabajar con menos muestras, aliviando la carga computacional. Para realizar los siguientes ejercicios, utilice el archivo `Pink.ogg`.
-
-#### Ejercicio 1)
-
-**Cargue la pista de audio. Verifique que la variable cargada es una matriz con 2 columnas, cada una correspondiendo a un canal de audio. Promedie los canales utilizando al función mean para tener 1 solo canal y grafique una porción de la señal resultante. Escuche el audio resultante para verificar el resultado.**
-"""
-
-# ╔═╡ a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
-# La frecuencia de muestreo está fija a 44100 Hz
-const sr = 44100
-
-# ╔═╡ d132a762-3ea3-11eb-3494-692576a31f34
-function loadaudio(fn)
-	
-    xraw = load(fn)
-	
-		# Chequeo que la frecuencia de muestreo sea `sr`
-    @assert samplerate(xraw) == sr  samplerate(xraw) 
-
-    return collect(xraw)
-end
+# ╔═╡ 0a039420-6d75-11eb-11e6-3579dc60d9bb
+md"""Notar que hay 441.000 muestras del tipo Float32 un con "sr=44100" mi frecuencia de muestreo el video debe durar 10 segundos"""
 
 # ╔═╡ 28c5ed26-3e6b-11eb-1d44-01e209b92f00
 # Wrapper para ver un vector de muestras de audio a 44100 Hz como un widget escuchable
 sound(x) = SampleBuf(x, sr);
+
+# ╔═╡ 621134d0-6d78-11eb-2959-99d0c3971552
+sound(x)
+
+# ╔═╡ 8e98a8ee-6d76-11eb-24d0-5305b72b633c
+md""" Se grafica parte de la señal de audio se toma 1500 muestras de las 441.0000 """ 
+
+# ╔═╡ 117bab80-6d79-11eb-235b-67753330b843
+n = 1:1:1500;
+
+# ╔═╡ 7f346530-6d7a-11eb-1066-75652a808a15
+tseg = n./44100;
+
+# ╔═╡ 344bedb0-6d73-11eb-3ec5-158ce2740b64
+plot(tseg,x[n],
+	label =  "f = 44100",
+	legend = true,
+	xlabel = "Tiempo(Seg)",
+	ylabel = "Amplitud",
+	#xlims=(0, 1500),
+	#ylims=(-1.1, 1.1)
+
+)
 
 # ╔═╡ b9ad22ac-3e67-11eb-35e1-7f4579b64838
 md"""
@@ -268,7 +307,53 @@ md"""
 """
 
 # ╔═╡ 4fc8c804-3ea4-11eb-3e97-eb6709f1c0aa
+function PDS(x)
+	ft = fft(x)
+	sxx = 1/(t.*(	abs.(ft)	))
+end
 
+# ╔═╡ 3f5d6960-6d80-11eb-1eab-c53c17a520ef
+
+paso=length(x)/100;
+
+# ╔═╡ 9450ce92-6d7f-11eb-259c-ddf6325b6d7f
+tst = x#c = [ fft(x[i:i+paso]) for i in 1:paso:length(x) ];
+
+# ╔═╡ ee59e260-6d88-11eb-3256-c36cab60d6b0
+#tener en cuenta que fft te da la transformada discreta de fourier, yo quiero la continua. por la relacion que hay yo tengo que dividir por la frecuencia de muestreo.
+## retorna el PSD en dB.
+psd = let	
+	n =	1000;		#4410 						#cantidad de muestras por segmento
+	t_win = n / sr;     					    #ancho del segmento.
+	#fft(tst_seg) ./ sr == X(W).
+	mean(10log10.(abs.( fft(tst_seg) ./ sr ).^2 ./t_win)
+	for tst_seg in arraysplit(tst, n, 0)
+	)
+#arraysplit me devuelve algo asi como un "vector de vectores de largo n".
+end
+
+# ╔═╡ b09f0110-6d94-11eb-084a-6129c8fca2fa
+#f_psd1 =range(1, sr/2, length =div(length(psd),2))
+
+# ╔═╡ d0993fe2-6d8e-11eb-02af-f32e42bfe853
+f_psd = let
+	m = 1:length(psd)/2;
+	(m.*sr)./length(psd) 
+end
+
+# ╔═╡ 211f97de-6d97-11eb-0408-85c92eeb0a0e
+md""" preguntar si esto esta bien!!!!!!! EL EJE DE FRECUENCIA(f_psd) NO ME DA MUCHA CONFIANZA"""
+
+# ╔═╡ 84d3ce80-6d8a-11eb-09f9-81d1392a1051
+plot(f_psd,
+	psd[1:div(length(psd),2)],
+	xlims = (0, 6000),
+	ylims =	(-80, -40),
+	title =  "PSD vs Frec.",
+	xlabel = "Frecuencia (Hz)",
+	ylabel = "PSD en dB (1/Hz)",
+	legend = false
+	)
 
 # ╔═╡ b60ae59e-3e67-11eb-123e-11c0cba7d09e
 md"""
@@ -277,8 +362,44 @@ md"""
 **Mediante la función `fft`, obtenga el espectro de una ventana rectangular y una de Hamming de igual duración y grafique su potencia en escala logarítmica en un mismo gráfico para compararlos. ¿Cuál es la resolución en frecuencia de cada ventana? Al realizar un espectrogama, ¿qué ventaja tiene utilizar la ventana de Hamming frente a la rectangular?**
 """
 
-# ╔═╡ 4e904a84-3ea4-11eb-0c12-b1fccd5f7036
+# ╔═╡ 0ae0430e-6d76-11eb-34c4-7b4ab551f242
+let
+  normalize(x) = x ./ sum(x)
+   plot()
+   plotwin(win) = plot!(log.(abs.(fft(padright(normalize(win(41)), 501))));
+	legend= true,
+   	xlims=(0, 150), ylims=(-15, 2), ylabel="dB")
+  
+  foreach(plotwin, [ones, hamming],)
+  plot!()
 
+end
+
+# ╔═╡ 4e904a84-3ea4-11eb-0c12-b1fccd5f7036
+let
+	n = 41;
+	sh= 501;
+	
+	normalize(x) = x ./ sum(x);
+	log_fft(win) =	 plot(log.(abs.(fft(padright(normalize(win(41)), 501)))));
+	
+	plot(log_fft(ones), log_fft(hamming),
+		label= ["ventana" "hamming"],
+		legend= true,
+   		xlims=(0, 250), ylims=(-15, 2), 
+		ylabel="Amplitud (dB)"
+	)
+#es necesiario pasar a omega?...dividir por fm.
+end
+
+# ╔═╡ eca8b002-6f35-11eb-2ef7-c1d8fb43e4cb
+specplot(tst)
+
+# ╔═╡ f1f1fd50-6f35-11eb-10cb-fffac18caf59
+a
+
+# ╔═╡ 4db2d110-6f30-11eb-187f-d36624b5dbfa
+md""" Se puede observar la diferencia entre los lobulos secundarios entre la ventana ideal y la de hamming, la relacion entre el primer lobulo y el segundo es mucho mejor con hamming."""
 
 # ╔═╡ b2025250-3e67-11eb-39a2-73292bbf17c9
 md"""
@@ -622,11 +743,30 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
 # ╠═a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
 # ╠═d132a762-3ea3-11eb-3494-692576a31f34
+# ╠═3da199b0-6b3d-11eb-04e6-fff2ac06d553
+# ╠═53a1ecb0-6b3d-11eb-1f24-55b65316c313
+# ╟─0a039420-6d75-11eb-11e6-3579dc60d9bb
 # ╠═28c5ed26-3e6b-11eb-1d44-01e209b92f00
+# ╠═621134d0-6d78-11eb-2959-99d0c3971552
+# ╟─8e98a8ee-6d76-11eb-24d0-5305b72b633c
+# ╠═117bab80-6d79-11eb-235b-67753330b843
+# ╠═7f346530-6d7a-11eb-1066-75652a808a15
+# ╠═344bedb0-6d73-11eb-3ec5-158ce2740b64
 # ╟─b9ad22ac-3e67-11eb-35e1-7f4579b64838
 # ╠═4fc8c804-3ea4-11eb-3e97-eb6709f1c0aa
+# ╠═3f5d6960-6d80-11eb-1eab-c53c17a520ef
+# ╠═9450ce92-6d7f-11eb-259c-ddf6325b6d7f
+# ╠═ee59e260-6d88-11eb-3256-c36cab60d6b0
+# ╠═b09f0110-6d94-11eb-084a-6129c8fca2fa
+# ╠═d0993fe2-6d8e-11eb-02af-f32e42bfe853
+# ╟─211f97de-6d97-11eb-0408-85c92eeb0a0e
+# ╠═84d3ce80-6d8a-11eb-09f9-81d1392a1051
 # ╟─b60ae59e-3e67-11eb-123e-11c0cba7d09e
+# ╠═0ae0430e-6d76-11eb-34c4-7b4ab551f242
 # ╠═4e904a84-3ea4-11eb-0c12-b1fccd5f7036
+# ╠═eca8b002-6f35-11eb-2ef7-c1d8fb43e4cb
+# ╠═f1f1fd50-6f35-11eb-10cb-fffac18caf59
+# ╟─4db2d110-6f30-11eb-187f-d36624b5dbfa
 # ╟─b2025250-3e67-11eb-39a2-73292bbf17c9
 # ╠═4c56bc6c-3ea4-11eb-01e7-7b26c1d054f0
 # ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
