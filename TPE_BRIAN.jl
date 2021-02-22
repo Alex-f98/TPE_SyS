@@ -358,7 +358,8 @@ let
 	plot()
 	plotwin(win) = plot!(log.( ( abs.(fft(padright(normalize(win(41)), 501))) ).^2 );
 	legend= false,
-	xlims=(0, 150), ylims=(-15, 2), ylabel=" DSP dB ", title = "densidad espectral de
+	xlims=(0, 150), ylims=(-15, 2), 
+	ylabel=" DSP dB ", title = "densidad espectral de
 	energia")
 	foreach(plotwin, [ones, hamming],)
 	plot!()
@@ -376,7 +377,7 @@ let
 	plot(Hamm, Rect)
 end
 #ver como hacer el grafico iterativo y poder apreciar mejor la resolucion espectral.
-#Revisar lo de abajo.
+#Revisar lo de abajo. TIENE QUE VER CON EL ORDEN DEL FILTRO QUE TOME, LA DISTINCION DE FRECUENCIAS.
 
 
 # ╔═╡ f538d140-73d2-11eb-2248-abda76c139a5
@@ -480,8 +481,10 @@ plot(fs, angle.(hfs); xlims=(0, π))
 #plot(fs, derivative(hfs))
 
 # ╔═╡ 6ef5b922-73e3-11eb-0504-652233cd6dda
-let pr = polynomialratio(hs, [1]) 
+let 
+	pr = polynomialratio(hs, [1]) 
 	zplane(getzeros(pr), getpoles(pr))
+	title!("Diagrama de polos y ceros")
 end
 
 # ╔═╡ 72acf4c0-73e3-11eb-1975-77a7c0a9c562
@@ -513,9 +516,10 @@ end
 # ╔═╡ d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
 #EL PROBLEMA ESTA ACA!!!! EL VECTOR QUE TIENE QUE GENERAR ES 8 VECES MAS GRANDE!!!! 
 function submuestrear(x,M)
-	y = zeros(length(x)*M) #me creo un vector para rellenar
-	[y[1 + M*(i-1)]= x[i] for i=1:length(x)] # aca hago inline loops :)
-	return y
+	#y = zeros(length(x)*M) #me creo un vector para rellenar
+	#[y[1 + M*(i-1)]= x[i] for i=1:length(x)] # aca hago inline loops :)
+	sample = x[1:M:end]
+	return sample
 end
 
 # ╔═╡ cc11a150-73e3-11eb-0459-4fedbabe462d
@@ -524,9 +528,6 @@ function reduce_sampleRate(x,fm)
 	M = 8 #44100 Hz a 5512.5 Hz
 	return submuestrear(conv(hs,x),M)
 end
-
-# ╔═╡ 7138e6ce-73ed-11eb-19ce-2fc865563236
-
 
 # ╔═╡ af4f3da4-3e67-11eb-3cc6-3378e0c12667
 md"""
@@ -540,6 +541,7 @@ let
 	order= 501
 	snf = specplot(tst; fs=sr, window=hamming(order), title= "sin filtrar" )
 	sf  = specplot(conv(hs, tst); fs=sr, window=hamming(order), title= "Filtrada" )
+	sfg  = specplot(conv(hs, tst); fs=sr, window=hamming(order), title= "Filtrada" )
 	plot(snf,sf)
 end
 
@@ -558,10 +560,57 @@ Los parámetros con los que se realice el espectrograma tienen una influencia di
 """
 
 # ╔═╡ f3971b40-73ea-11eb-3f2e-dd3a4443b9ab
-#ssm = reduce_sampleRate(tst, sr);  <--arreglar reductor
+ssm = reduce_sampleRate(tst, sr);  
+#length(tst) #441000
+#length(ssm) #55154 muestras
+#441000/55154 =7.995793596112702->8
+
+# ╔═╡ f906add0-74b1-11eb-156d-9b7c54bfd2ba
+
 
 # ╔═╡ 39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
-#specplot(ssm; fs=sr, window=hamming(501), title= "Reducida" )
+begin	
+	order1= 2041
+	order2=	1020#order1/2
+	order3= 4082#order*2
+	
+	sr2 = sr/8;
+	ovrlp=31/32;
+	
+
+		
+end
+
+# ╔═╡ 52e0ff90-74b2-11eb-383b-f5b0ce7d5b51
+p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hanning(order1),title= "Reducida1");
+
+# ╔═╡ 6f115660-74b2-11eb-061a-69c25acb45cc
+p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order2),title= "Reducida2");
+
+# ╔═╡ 81af1d72-74b2-11eb-03d0-5f25a49e48c6
+p3= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order3),title= "Reducida3");
+
+# ╔═╡ 23fbd740-74b2-11eb-0bd0-bb90f6a2c989
+	
+#plot(p1,p2,p3,
+	xlims= (1, 5),
+	ylims= (0, 1500)
+)
+
+# ╔═╡ 37d5c59e-74a3-11eb-26be-6fa0711fd4b6
+let
+	#t_s=1/2322;
+	t_win2=0.37 						#segun elpaper
+	fm=5512.5
+	muestras= t_win2 * fm 				#2040muestras.
+	
+	
+end
+
+
+# ╔═╡ 6d1698d0-74a7-11eb-15bf-35d2eae0061f
+2041/2
+
 
 # ╔═╡ 9309e284-3e67-11eb-1ab2-612f6c748c3b
 md"""
@@ -908,13 +957,19 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═7c44b4a0-73e3-11eb-03c4-afb2354639a0
 # ╠═d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
 # ╠═cc11a150-73e3-11eb-0459-4fedbabe462d
-# ╠═7138e6ce-73ed-11eb-19ce-2fc865563236
-# ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
+# ╠═af4f3da4-3e67-11eb-3cc6-3378e0c12667
 # ╠═3aa5434e-3ea4-11eb-20aa-b15564d4eb90
 # ╠═38c05a80-73e4-11eb-274d-d538d2e3fb65
 # ╟─982538c4-3e67-11eb-229e-dd2531a540d6
 # ╠═f3971b40-73ea-11eb-3f2e-dd3a4443b9ab
+# ╠═f906add0-74b1-11eb-156d-9b7c54bfd2ba
 # ╠═39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
+# ╠═52e0ff90-74b2-11eb-383b-f5b0ce7d5b51
+# ╠═6f115660-74b2-11eb-061a-69c25acb45cc
+# ╠═81af1d72-74b2-11eb-03d0-5f25a49e48c6
+# ╠═23fbd740-74b2-11eb-0bd0-bb90f6a2c989
+# ╠═37d5c59e-74a3-11eb-26be-6fa0711fd4b6
+# ╠═6d1698d0-74a7-11eb-15bf-35d2eae0061f
 # ╟─9309e284-3e67-11eb-1ab2-612f6c748c3b
 # ╠═5f636b02-3ea4-11eb-3f78-6f693a936992
 # ╟─8deaf928-3e67-11eb-0327-31e0f74de814
