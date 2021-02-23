@@ -487,6 +487,9 @@ let
 	title!("Diagrama de polos y ceros")
 end
 
+# ╔═╡ d08961ee-7550-11eb-0529-513ae044a205
+md""" un sistema FIR es finita en el tiempo y esta definida por sus ceros, es decir no tiene polos enel plano finito salvo en cero."""
+
 # ╔═╡ 72acf4c0-73e3-11eb-1975-77a7c0a9c562
 begin
 m = 1000; #cantidad de muestras por segmento
@@ -570,46 +573,39 @@ ssm = reduce_sampleRate(tst, sr);
 
 # ╔═╡ 39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
 begin	
-	order1= 2041
-	order2=	1020#order1/2
-	order3= 4082#order*2
+	order1= 2048  #orden de mis filtros
+	order2= div(order1, 2)
+	order3= order1*2
 	
-	sr2 = sr/8;
-	ovrlp=31/32;
-	
-
-		
+	sr2 = sr/8;   #Nueva frecuencia de muestreo.
+	ovrlp=31/32;  #overlap propuesto por el paper
+			
 end
 
-# ╔═╡ 52e0ff90-74b2-11eb-383b-f5b0ce7d5b51
-p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hanning(order1),title= "Reducida1");
-
-# ╔═╡ 6f115660-74b2-11eb-061a-69c25acb45cc
-p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order2),title= "Reducida2");
-
-# ╔═╡ 81af1d72-74b2-11eb-03d0-5f25a49e48c6
-p3= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order3),title= "Reducida3");
-
-# ╔═╡ 23fbd740-74b2-11eb-0bd0-bb90f6a2c989
-	
-#plot(p1,p2,p3,
-	xlims= (1, 5),
-	ylims= (0, 1500)
-)
-
-# ╔═╡ 37d5c59e-74a3-11eb-26be-6fa0711fd4b6
+# ╔═╡ 5cc77020-74bc-11eb-154a-277125d7a831
 let
-	#t_s=1/2322;
-	t_win2=0.37 						#segun elpaper
-	fm=5512.5
-	muestras= t_win2 * fm 				#2040muestras.
+	order2= 1020
+	order3= order1*2
+	p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order1),title= "hamming");
+	p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=ones(order1),title= "rectangular");
 	
-	
+	plot(p1,p2, layout= (1, 2),
+		xlims= (1, 5),
+		ylims= (0, 1500)
+	)
 end
 
+# ╔═╡ 116d1c02-750d-11eb-3c2a-19b4e9c04995
+#Lafuncion plot no es muy amiga del specplot, se rompe a cadarato, por ello cargar imagenes de los espectrogramas y subirlas.
+#let
+	#t_s=1/2322;
+#	t_win2=0.37 						#segun elpaper
+#	fm=5512.5
+#	muestras= t_win2 * fm 				#2040muestras.
+		
+#end
 
 # ╔═╡ 6d1698d0-74a7-11eb-15bf-35d2eae0061f
-2041/2
 
 
 # ╔═╡ 9309e284-3e67-11eb-1ab2-612f6c748c3b
@@ -630,7 +626,84 @@ Debemos obtener una matriz de energías `E`, cuyas columnas, al igual que las de
 """
 
 # ╔═╡ 5f636b02-3ea4-11eb-3f78-6f693a936992
+fbands= exp.(range(log(300); stop=log(2e3), length=22))
 
+# ╔═╡ 59fddd50-7513-11eb-1f17-07ef0c9f45f0
+md""" cada frecuencia es igual al anterior multiplicada por el mismo factor """
+
+# ╔═╡ 6813ab40-7513-11eb-11b4-8f3040b56c91
+fbands[2: end] ./ fbands[1: end - 1]
+
+# ╔═╡ a46234e0-7513-11eb-21d2-8592c8fec31d
+fbands[[1, end]]
+
+# ╔═╡ aeb41d00-7513-11eb-0980-9b6250c020af
+length(fbands)
+
+# ╔═╡ c5806300-7549-11eb-2268-0fb465e3126a
+#div_fil = floor.(Int, range(1; stop=10^log(2048), length=22))
+
+
+# ╔═╡ 7316d5a0-754d-11eb-0a4b-93e180b3bf94
+begin
+	div_fil= floor.(Int, [2048*(log(i)/log(22)) for i in 1:1:22])
+	div_fil[1,1]=1;
+end
+
+
+# ╔═╡ a515084e-754e-11eb-0bfb-ad5e4b306bef
+div_fil
+
+# ╔═╡ eb421110-7549-11eb-24e8-c76d0d5ecf99
+length(div_fil)
+
+# ╔═╡ e6a127a0-751b-11eb-34ac-418d1ad01639
+begin
+	ovlp= floor(Int, order1 - (31/32)*length(hamming(order1))) #esto da entero, 64.
+	s= stft(tst; overlap= ovlp, window= hamming(order1), nfft= order1)
+end
+
+# ╔═╡ 5dbb0cc0-755d-11eb-0f17-df0443bb687b
+#ss,f,t = spectrogram(tst; noverlap= ovlp, window=hamming(order1), nfft=order1)
+
+# ╔═╡ 7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
+begin
+	function mean_nfil(mat, i, j, wfil)
+		@assert wfil >= 1
+		aux=(abs(mat[i,j]))^2;
+		[aux = ((abs(mat[i,j]))^2 + aux) for x=i+1:1:i + wfil -1]
+
+		return aux
+	end
+#recibe la matriz "mtr" su fila inicial y el ancho de filas quedebe promediar.
+	function mean_band_gap(mtr, init_fil, fil_band)
+		fil_mtr, col_mtr = size(mtr);
+		mat2= mtr[1, :];
+
+		mat2= [mean_nfil(mtr, init_fil, j, fil_band) for j= init_fil:1:col_mtr]
+
+		return mat2
+	end
+end
+
+# ╔═╡ 8a696ed0-7524-11eb-0764-214ebea3d1e7
+E = let
+	
+	fil_band(w_seg) = sr2*(fbands[w_seg] - fbands[w_seg + 1]); ##muestras que hay en 	      															esas frec
+	fil_mtr, col_mtr = size(s);
+	XD = zeros(length(div_fil), col_mtr)
+	
+	XD= hcat([ mean_band_gap(s, i , w_seg)
+				for w_seg in div_fil[2:1:end] 
+				for i in div_fil[1:1:end-1]
+				])
+				#for filE in 1:1:length(div_fil) ]
+	
+end
+#imposible!!!! no puedo no puedo!!! quiero armar con los vectores una matriz!!!!	
+
+# ╔═╡ e7efa830-753d-11eb-3be6-7df15a0c4ccd
+size(E)
 
 # ╔═╡ 8deaf928-3e67-11eb-0327-31e0f74de814
 md"""
@@ -647,7 +720,23 @@ En palabras, $H[m, n]$ es 1 si la diferencia de energía entre las bandas $m$ y 
 """
 
 # ╔═╡ 6476e9fc-3ea4-11eb-3873-b765108f4bab
+begin
+	function bern(E, m, n)
+	  (E[m+1, n]-E[m,n]) > (E[m+1, n+1]-E[m, n-1]) && return 1
 
+	  return 0
+
+	end 
+
+	function H(E)
+		filE, colE = size(E)
+		H=zeros(filE-1, colE)
+		[H[m,n] = bern(E, m+1, n+1) for n in 1:1:filE for m in 1:1:colE]
+	end
+end
+
+# ╔═╡ 5bf232a0-7568-11eb-302c-a17935859a8a
+plot_huella(h)= Gray.(float.(h));
 
 # ╔═╡ 89743a62-3e67-11eb-209e-9b1f3cc84e34
 md"""
@@ -915,7 +1004,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 """
 
 # ╔═╡ Cell order:
-# ╟─09062294-3e5f-11eb-176f-dfcbf841f111
+# ╠═09062294-3e5f-11eb-176f-dfcbf841f111
 # ╟─8f1394ee-3e63-11eb-0093-e75468460dc5
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
@@ -953,6 +1042,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═bb5879c0-73d8-11eb-1f5e-9b0297fa50af
 # ╠═b40552ae-73d8-11eb-0fa9-333246437734
 # ╠═6ef5b922-73e3-11eb-0504-652233cd6dda
+# ╠═d08961ee-7550-11eb-0529-513ae044a205
 # ╠═72acf4c0-73e3-11eb-1975-77a7c0a9c562
 # ╠═7c44b4a0-73e3-11eb-03c4-afb2354639a0
 # ╠═d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
@@ -964,16 +1054,27 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═f3971b40-73ea-11eb-3f2e-dd3a4443b9ab
 # ╠═f906add0-74b1-11eb-156d-9b7c54bfd2ba
 # ╠═39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
-# ╠═52e0ff90-74b2-11eb-383b-f5b0ce7d5b51
-# ╠═6f115660-74b2-11eb-061a-69c25acb45cc
-# ╠═81af1d72-74b2-11eb-03d0-5f25a49e48c6
-# ╠═23fbd740-74b2-11eb-0bd0-bb90f6a2c989
-# ╠═37d5c59e-74a3-11eb-26be-6fa0711fd4b6
+# ╠═5cc77020-74bc-11eb-154a-277125d7a831
+# ╠═116d1c02-750d-11eb-3c2a-19b4e9c04995
 # ╠═6d1698d0-74a7-11eb-15bf-35d2eae0061f
 # ╟─9309e284-3e67-11eb-1ab2-612f6c748c3b
 # ╠═5f636b02-3ea4-11eb-3f78-6f693a936992
+# ╟─59fddd50-7513-11eb-1f17-07ef0c9f45f0
+# ╠═6813ab40-7513-11eb-11b4-8f3040b56c91
+# ╠═a46234e0-7513-11eb-21d2-8592c8fec31d
+# ╠═aeb41d00-7513-11eb-0980-9b6250c020af
+# ╠═c5806300-7549-11eb-2268-0fb465e3126a
+# ╠═7316d5a0-754d-11eb-0a4b-93e180b3bf94
+# ╠═a515084e-754e-11eb-0bfb-ad5e4b306bef
+# ╠═eb421110-7549-11eb-24e8-c76d0d5ecf99
+# ╠═e6a127a0-751b-11eb-34ac-418d1ad01639
+# ╠═5dbb0cc0-755d-11eb-0f17-df0443bb687b
+# ╠═7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
+# ╠═8a696ed0-7524-11eb-0764-214ebea3d1e7
+# ╠═e7efa830-753d-11eb-3be6-7df15a0c4ccd
 # ╟─8deaf928-3e67-11eb-0327-31e0f74de814
 # ╠═6476e9fc-3ea4-11eb-3873-b765108f4bab
+# ╠═5bf232a0-7568-11eb-302c-a17935859a8a
 # ╟─89743a62-3e67-11eb-209e-9b1f3cc84e34
 # ╠═741304fe-3ea4-11eb-15e8-09908d98ecb3
 # ╟─855a7d2e-3e67-11eb-0f46-a5c786d5caf3
