@@ -19,6 +19,7 @@ begin
 	Pkg.add.(["DSP", "FFTW", "FileIO", "WAV", "PlutoUI", "Plotly"])
 	Pkg.add.(["LibSndFile", "SampledSignals", "Statistics"])
 	Pkg.add(["ImageMagick", "Images", "ImageIO", "Plots", "IterTools"])
+	#Pkg.add("Calculus")
 	using Plots
 		plotly()
 	using DSP, FFTW
@@ -282,6 +283,9 @@ begin
   tseg = n./sr
 end
 
+# ╔═╡ a56414d0-7621-11eb-0140-e57ff8c679ff
+md""" Se grafica segundode la muestra del audio Pink.ogg para mostrarla en detalle"""
+
 # ╔═╡ 1e7678f0-73ce-11eb-02a6-053cc2e84b2f
 plot(tseg,tst[n],
 label = "f = 44100",
@@ -329,6 +333,9 @@ begin
 	end
 
 end
+
+# ╔═╡ d987dc10-7621-11eb-26d9-d148f796fc11
+md""" Se procede a graficar la PSD, notar que para las frecuencias mas bajas es donde la PSD es mayor, esto sugiere que que lo importante de la señal se concentra en unrango menor de frecuencias y podriamos despreciar los que sucede a mas altas frecuencias. """
 
 # ╔═╡ 7776221e-73ce-11eb-003c-857b22a7e7c1
 plot(f_psd,
@@ -473,7 +480,21 @@ end
 # ╔═╡ bb5879c0-73d8-11eb-1f5e-9b0297fa50af
 #Grafico la fase de mi filtro.
 
-plot(fs, angle.(hfs); xlims=(0, π))
+#plot(fs, angle.(hfs); xlims=(0, π))
+
+# ╔═╡ 92bed250-75e2-11eb-3e64-d15f6a219026
+plot(fs, unwrap(angle.(hfs)); xlims=(0, π), title= "Fase", label= false)
+
+# ╔═╡ 9fee5cf0-75f8-11eb-0404-cd8ad839260c
+md"""Notar que la fase es lineal """
+
+# ╔═╡ 2fcff8a0-761d-11eb-12d0-1736a6b45e85
+let
+	fase= unwrap(angle.(hfs));
+	fg = range(0; step=2pi/samples, length=samples-1)
+	#retardo de grupo se define como -d(fase(w))/dw.
+	plot(fg, -diff(fase)/(2π/length(fase)) ; xlims=(0, π), title= "Retardo de grupo", label= false)
+end
 
 # ╔═╡ b40552ae-73d8-11eb-0fa9-333246437734
 #   se define el retardo de grupo coomo tg= -1d(fase(w))/dw
@@ -569,7 +590,7 @@ ssm = reduce_sampleRate(tst, sr);
 #441000/55154 =7.995793596112702->8
 
 # ╔═╡ f906add0-74b1-11eb-156d-9b7c54bfd2ba
-
+length(ssm)
 
 # ╔═╡ 39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
 begin	
@@ -578,8 +599,8 @@ begin
 	order3= order1*2
 	
 	sr2 = sr/8;   #Nueva frecuencia de muestreo.
-	ovrlp=31/32;  #overlap propuesto por el paper
-			
+	ovrlp=0.5#31/32;  #overlap propuesto por el paper
+	#bajarle el overlap paraverlo mas suave	!!!!!	
 end
 
 # ╔═╡ 5cc77020-74bc-11eb-154a-277125d7a831
@@ -588,6 +609,32 @@ let
 	order3= order1*2
 	p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order1),title= "hamming");
 	p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=ones(order1),title= "rectangular");
+	
+	plot(p1,p2, layout= (1, 2),
+		xlims= (1, 5),
+		ylims= (0, 1500)
+	)
+end
+
+# ╔═╡ aa6bbab2-7620-11eb-36d0-9b82996620bb
+let
+	order2= 1020
+	order3= order1*2
+	p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order3),title= "hamming");
+	p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=ones(order3),title= "rectangular");
+	
+	plot(p1,p2, layout= (1, 2),
+		xlims= (1, 5),
+		ylims= (0, 1500)
+	)
+end
+
+# ╔═╡ b52628a0-7620-11eb-1dda-65bc93222c5c
+let
+	order2= 1020
+	order3= order1*2
+	p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order2),title= "hamming");
+	p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=ones(order2),title= "rectangular");
 	
 	plot(p1,p2, layout= (1, 2),
 		xlims= (1, 5),
@@ -632,10 +679,10 @@ fbands= exp.(range(log(300); stop=log(2e3), length=22))
 md""" cada frecuencia es igual al anterior multiplicada por el mismo factor """
 
 # ╔═╡ 6813ab40-7513-11eb-11b4-8f3040b56c91
-fbands[2: end] ./ fbands[1: end - 1]
+fbands[2: end] ./ fbands[1: end - 1] 		#coeficientes constantes.
 
 # ╔═╡ a46234e0-7513-11eb-21d2-8592c8fec31d
-fbands[[1, end]]
+fbands[[1, end]]  				#frecuenciasinferiores  y superiores acordes.
 
 # ╔═╡ aeb41d00-7513-11eb-0980-9b6250c020af
 length(fbands)
@@ -660,22 +707,35 @@ length(div_fil)
 # ╔═╡ e6a127a0-751b-11eb-34ac-418d1ad01639
 begin
 	ovlp= floor(Int, order1 - (31/32)*length(hamming(order1))) #esto da entero, 64.
-	s= stft(tst; overlap= ovlp, window= hamming(order1), nfft= order1)
+	s= stft(ssm; overlap= ovlp, window= hamming(order1), nfft= order1);
+	S=s[1:div(2048, 2), :]
 end
 
+# ╔═╡ 46b25e4e-7609-11eb-3ef8-bff9a5a5898d
+begin
+	fil, col = size(s);
+	div_fil_f = floor.(Int, (div(fil,2) .* fbands[1:end]) ./ (sr2/2))
+end
+#son muy pocas las muestras que toma!! esto esta bien?
+
+# ╔═╡ 9f9d4a30-760d-11eb-04f5-d1352a5773df
+length(div_fil_f)
+
 # ╔═╡ 5dbb0cc0-755d-11eb-0f17-df0443bb687b
+
 #ss,f,t = spectrogram(tst; noverlap= ovlp, window=hamming(order1), nfft=order1)
 
 # ╔═╡ 7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
-begin
+#begin
 	function mean_nfil(mat, i, j, wfil)
 		@assert wfil >= 1
 		aux=(abs(mat[i,j]))^2;
-		[aux = ((abs(mat[i,j]))^2 + aux) for x=i+1:1:i + wfil -1]
-
+		[aux = ((abs(mat[x,j]))^2 + aux) for x=i+1:1:i + wfil -1]
+#aca quien carajos es x!!!
 		return aux
 	end
 #recibe la matriz "mtr" su fila inicial y el ancho de filas quedebe promediar.
+
 	function mean_band_gap(mtr, init_fil, fil_band)
 		fil_mtr, col_mtr = size(mtr);
 		mat2= mtr[1, :];
@@ -687,7 +747,7 @@ begin
 end
 
 # ╔═╡ 8a696ed0-7524-11eb-0764-214ebea3d1e7
-E = let
+#E = let
 	
 	fil_band(w_seg) = sr2*(fbands[w_seg] - fbands[w_seg + 1]); ##muestras que hay en 	      															esas frec
 	fil_mtr, col_mtr = size(s);
@@ -702,8 +762,12 @@ E = let
 end
 #imposible!!!! no puedo no puedo!!! quiero armar con los vectores una matriz!!!!	
 
-# ╔═╡ e7efa830-753d-11eb-3be6-7df15a0c4ccd
-size(E)
+# ╔═╡ 4a342420-75df-11eb-35be-0bc9cc550163
+#para cada banda m en s calculla la media de los abs ^2 de las filas correspondientes.
+E(m,n)= mean( abs.( S[div_fil_f[m]:div_fil_f[m+1], n] ).^2 )
+
+# ╔═╡ 10881de0-75f7-11eb-0aaa-8b0de38fd5f5
+
 
 # ╔═╡ 8deaf928-3e67-11eb-0327-31e0f74de814
 md"""
@@ -721,22 +785,39 @@ En palabras, $H[m, n]$ es 1 si la diferencia de energía entre las bandas $m$ y 
 
 # ╔═╡ 6476e9fc-3ea4-11eb-3873-b765108f4bab
 begin
-	function bern(E, m, n)
-	  (E[m+1, n]-E[m,n]) > (E[m+1, n+1]-E[m, n-1]) && return 1
-
-	  return 0
-
+	
+	function bern(m, n)
+	  (E(m+1, n)-E(m,n)) > (E(m+1, n-1)-E(m, n-1)) && return 1
+	  return 0		
 	end 
 
-	function H(E)
-		filE, colE = size(E)
-		H=zeros(filE-1, colE)
-		[H[m,n] = bern(E, m+1, n+1) for n in 1:1:filE for m in 1:1:colE]
+	function H(s)
+		fils, cols = size(s)
+		filE= length(div_fil_f)-2
+		#filE= 
+			
+		#H= zeros(filE, cols)
+		#[H[m,n] = bern(m, n+1) for m in 1:1:filE for n in 2:1:cols-1]
+		H = [bern(m, n+1) for m in 1:1: filE#=filE=#,  n in 1:1:cols-1#=cols-1=#]
+		
+		return H
 	end
 end
 
+# ╔═╡ 2435f260-7618-11eb-1b22-d3eda517d5f0
+#H = zeros(...)
+#for n in 2:1:cols-1
+#    H[m, n] = bern...
+#end
+
+# ╔═╡ d33d59f0-75f6-11eb-2c74-1b8e3be2f9c1
+huella= H(S)
+
 # ╔═╡ 5bf232a0-7568-11eb-302c-a17935859a8a
 plot_huella(h)= Gray.(float.(h));
+
+# ╔═╡ 42c730b0-7625-11eb-1c4e-6b516c1eb2e7
+plot_huella(huella)
 
 # ╔═╡ 89743a62-3e67-11eb-209e-9b1f3cc84e34
 md"""
@@ -790,7 +871,10 @@ md"""
 """
 
 # ╔═╡ 088ca198-3e74-11eb-0cf3-23a983165a0d
-
+#Segun tengo entendido es algo como muestras/seg=fs/(n*ov)
+#Fs frecuencia sampling
+#n largo de ventana en muestras
+#Ov overlap, si es 50% de n se duplican las muetras por segundo
 
 # ╔═╡ 81717fc8-3e67-11eb-05fc-5bde46597f8a
 md"""
@@ -914,6 +998,19 @@ md"""
 """
 
 # ╔═╡ f91ed600-3ea4-11eb-3945-6999aaa4d0dd
+begin
+	function addsnr!(x, snr)
+		a= var(x)/10^(snr/10)
+		x .+= sqrt(a) * randn(length(x))
+	end
+	addsnr(x, snr)=addsnr!(copy(x), snr);
+end;
+
+# ╔═╡ b99bea60-7601-11eb-3f06-ef522296b39d
+#[ mean(test(segdur) for _ in 1:50 )
+#		for segdur 	in (5, 10, 20)]
+
+# ╔═╡ 00da49d0-7602-11eb-31f1-dfe5b07d6349
 
 
 # ╔═╡ 7229577a-3e67-11eb-0c71-f383056175d1
@@ -1008,19 +1105,21 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─8f1394ee-3e63-11eb-0093-e75468460dc5
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
-# ╠═a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
-# ╠═d132a762-3ea3-11eb-3494-692576a31f34
-# ╠═28c5ed26-3e6b-11eb-1d44-01e209b92f00
-# ╠═92649f90-73cd-11eb-0df8-4958d753607d
-# ╠═a2fa88b0-73cd-11eb-1336-9fbf72b0ddd8
+# ╟─a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
+# ╟─d132a762-3ea3-11eb-3494-692576a31f34
+# ╟─28c5ed26-3e6b-11eb-1d44-01e209b92f00
+# ╟─92649f90-73cd-11eb-0df8-4958d753607d
+# ╟─a2fa88b0-73cd-11eb-1336-9fbf72b0ddd8
 # ╠═a7727c3e-73cd-11eb-3bdc-8dd64b6b43ad
-# ╠═a83a1200-73cd-11eb-353c-751703d316cd
-# ╠═1e7678f0-73ce-11eb-02a6-053cc2e84b2f
+# ╟─a83a1200-73cd-11eb-353c-751703d316cd
+# ╟─a56414d0-7621-11eb-0140-e57ff8c679ff
+# ╟─1e7678f0-73ce-11eb-02a6-053cc2e84b2f
 # ╠═202f4c80-73ce-11eb-2b03-1dc6c7240993
 # ╟─b9ad22ac-3e67-11eb-35e1-7f4579b64838
 # ╠═4fc8c804-3ea4-11eb-3e97-eb6709f1c0aa
 # ╠═56f4c0b0-73ce-11eb-09fd-fba3b409e4d9
-# ╠═7776221e-73ce-11eb-003c-857b22a7e7c1
+# ╟─d987dc10-7621-11eb-26d9-d148f796fc11
+# ╟─7776221e-73ce-11eb-003c-857b22a7e7c1
 # ╠═bffcb902-73ce-11eb-31c9-05d7c512a3d0
 # ╟─b60ae59e-3e67-11eb-123e-11c0cba7d09e
 # ╠═4e904a84-3ea4-11eb-0c12-b1fccd5f7036
@@ -1040,6 +1139,9 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═7e90a16e-73d8-11eb-1e23-0b1e366467aa
 # ╠═b18648f0-73d8-11eb-2f64-ff6fb23b096a
 # ╠═bb5879c0-73d8-11eb-1f5e-9b0297fa50af
+# ╠═92bed250-75e2-11eb-3e64-d15f6a219026
+# ╠═9fee5cf0-75f8-11eb-0404-cd8ad839260c
+# ╠═2fcff8a0-761d-11eb-12d0-1736a6b45e85
 # ╠═b40552ae-73d8-11eb-0fa9-333246437734
 # ╠═6ef5b922-73e3-11eb-0504-652233cd6dda
 # ╠═d08961ee-7550-11eb-0529-513ae044a205
@@ -1055,6 +1157,8 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═f906add0-74b1-11eb-156d-9b7c54bfd2ba
 # ╠═39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
 # ╠═5cc77020-74bc-11eb-154a-277125d7a831
+# ╠═aa6bbab2-7620-11eb-36d0-9b82996620bb
+# ╠═b52628a0-7620-11eb-1dda-65bc93222c5c
 # ╠═116d1c02-750d-11eb-3c2a-19b4e9c04995
 # ╠═6d1698d0-74a7-11eb-15bf-35d2eae0061f
 # ╟─9309e284-3e67-11eb-1ab2-612f6c748c3b
@@ -1068,13 +1172,19 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═a515084e-754e-11eb-0bfb-ad5e4b306bef
 # ╠═eb421110-7549-11eb-24e8-c76d0d5ecf99
 # ╠═e6a127a0-751b-11eb-34ac-418d1ad01639
+# ╠═46b25e4e-7609-11eb-3ef8-bff9a5a5898d
+# ╠═9f9d4a30-760d-11eb-04f5-d1352a5773df
 # ╠═5dbb0cc0-755d-11eb-0f17-df0443bb687b
-# ╠═7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
-# ╠═8a696ed0-7524-11eb-0764-214ebea3d1e7
-# ╠═e7efa830-753d-11eb-3be6-7df15a0c4ccd
+# ╟─7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
+# ╟─8a696ed0-7524-11eb-0764-214ebea3d1e7
+# ╠═4a342420-75df-11eb-35be-0bc9cc550163
+# ╠═10881de0-75f7-11eb-0aaa-8b0de38fd5f5
 # ╟─8deaf928-3e67-11eb-0327-31e0f74de814
 # ╠═6476e9fc-3ea4-11eb-3873-b765108f4bab
+# ╠═2435f260-7618-11eb-1b22-d3eda517d5f0
+# ╠═d33d59f0-75f6-11eb-2c74-1b8e3be2f9c1
 # ╠═5bf232a0-7568-11eb-302c-a17935859a8a
+# ╠═42c730b0-7625-11eb-1c4e-6b516c1eb2e7
 # ╟─89743a62-3e67-11eb-209e-9b1f3cc84e34
 # ╠═741304fe-3ea4-11eb-15e8-09908d98ecb3
 # ╟─855a7d2e-3e67-11eb-0f46-a5c786d5caf3
@@ -1088,7 +1198,9 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─7c7c1424-3e67-11eb-1da0-5dbad0171b20
 # ╠═415e32e6-3e76-11eb-17fa-23bd653fb975
 # ╟─76ce23dc-3e67-11eb-0be0-91b6781840fb
-# ╠═f91ed600-3ea4-11eb-3945-6999aaa4d0dd
+# ╟─f91ed600-3ea4-11eb-3945-6999aaa4d0dd
+# ╠═b99bea60-7601-11eb-3f06-ef522296b39d
+# ╠═00da49d0-7602-11eb-31f1-dfe5b07d6349
 # ╟─7229577a-3e67-11eb-0c71-f383056175d1
 # ╠═4e913d8e-3ea6-11eb-25e6-e3d03de7b3e0
 # ╟─6d76f2f2-3e67-11eb-04dc-0580a2072dda
