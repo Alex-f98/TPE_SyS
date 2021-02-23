@@ -493,7 +493,8 @@ let
 	fase= unwrap(angle.(hfs));
 	fg = range(0; step=2pi/samples, length=samples-1)
 	#retardo de grupo se define como -d(fase(w))/dw.
-	plot(fg, -diff(fase)/(2π/length(fase)) ; xlims=(0, π), title= "Retardo de grupo", label= false)
+	plot(fg, -diff(fase)/(2π/length(fase)) ; xlims=(0, π), 
+		title= "Retardo de grupo", label= false)
 end
 
 # ╔═╡ b40552ae-73d8-11eb-0fa9-333246437734
