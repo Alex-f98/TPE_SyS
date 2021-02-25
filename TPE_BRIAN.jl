@@ -1118,15 +1118,43 @@ md"""
 **Evalúe la tasa de aciertos del algoritmo identificando segmentos de duración $T$ con tiempo inicial elegido al azar de canciones elegidas al azar (vea la función `rand`). Las canciones deberán ser las mismas que utilizó para confeccionar la base de datos. Realice la evaluación para 50 segmentos con duración T  entre 5, 10 y 20 segundos cada vez (150 evaluaciones en total) obteniendo la tasa de aciertos en cada caso.**
 """
 
+# ╔═╡ 00da49d0-7602-11eb-31f1-dfe5b07d6349
+
+
+# ╔═╡ 7229577a-3e67-11eb-0c71-f383056175d1
+md"""
+#### Ejercicio 13)
+
+**Repita el ejercicio 12 sumando ruido a los segmentos de audio. Utilice la función `randn` para generar las muestras de ruido. Evalúe tasa de aciertos para $SNR =0dB$, $10dB$ y $20dB$, mostrando sus resultados en una tabla para 9 combinaciones de longitud temporal y ruido. Nota: $SNR=10 log_{10}(P_X/P_N)$ donde $P_X$ es la potencia media de la señal sin ruido, y $P_N$ es la potencia media del ruido sumado a la señal. Para el cálculo de la potencia media puede utilizar la función `var`, que estima la varianza de una señal, ya que las señales de audio no deberían componente continua o valor medio.**
+"""
+
+# ╔═╡ 841f7430-77b2-11eb-180b-11a3ec034424
+function add_noise(x, snr)
+	xn= x 									#copio la señal original.
+	snr= 10^(snr/10)  						#snr_db=10log10(snr)
+	#potencia media es suma de los valores ^2 /largo
+	pn = var(xn)/snr       				 	#el ruido y la señal tienen media nula.
+	
+	#xn= [x .+sqrt(pepe) * randn(length(x)) for i in 1:length(x)]
+	xn= x .+sqrt(pn) * randn(length(x))    #genero y sumo ruido
+	
+	return xn
+end
+
 # ╔═╡ 7d82ea60-779b-11eb-2e75-8997f2c88b53
 #toma una duracion aleatoria procesa la huella y devuelve true si fue encontrado exitosamente.
-function is_song(t)
+function is_song(t; snr=0, noise::Bool=false)#keyword arguments
 	
 	nduration= floor(Int, t * sr )					#seg-->muestras.
 	song= rand(songs)								#elijo una cancion al azar.
 	rsong= to_mono(joinpath(songsdir, song))		#cargo la cansion.
 	ninit= rand(1: length(rsong) - nduration) 		#elijo inicio al azar.
 	x= rsong[ninit:ninit + nduration - 2] 		#obtengo el segmento a testear.
+	
+	if noise == true
+		x= add_noise(x, snr)
+	end
+		
 	
 	return song == songs[query_DB(db, #=hhuella=# generar_huella!(x) )]
 end
@@ -1138,24 +1166,12 @@ is_song(50)
  [mean(is_song(t) for _ in 1:50 )
 		for t 	in (5, 10, 20)]
 
-# ╔═╡ 00da49d0-7602-11eb-31f1-dfe5b07d6349
+# ╔═╡ 129267b0-77b6-11eb-2fa3-5914fd885d43
+ [mean(is_song(t; snr= algo, noise=true) for _ in 1:50 )
+		for t in (5, 10, 20), algo in (0, 10, 20)]
 
-
-# ╔═╡ 7229577a-3e67-11eb-0c71-f383056175d1
-md"""
-#### Ejercicio 13)
-
-**Repita el ejercicio 12 sumando ruido a los segmentos de audio. Utilice la función `randn` para generar las muestras de ruido. Evalúe tasa de aciertos para $SNR =0dB$, $10dB$ y $20dB$, mostrando sus resultados en una tabla para 9 combinaciones de longitud temporal y ruido. Nota: $SNR=10 log_{10}(P_X/P_N)$ donde $P_X$ es la potencia media de la señal sin ruido, y $P_N$ es la potencia media del ruido sumado a la señal. Para el cálculo de la potencia media puede utilizar la función `var`, que estima la varianza de una señal, ya que las señales de audio no deberían componente continua o valor medio.**
-"""
-
-# ╔═╡ 4e913d8e-3ea6-11eb-25e6-e3d03de7b3e0
-begin
-	function addsnr!(x, snr)
-		a= var(x) / 10^(snr/10)
-		x .+= sqrt(a) * randn(length(x))
-	end
-	addsnr(x, snr)=addsnr!(copy(x), snr);
-end;
+# ╔═╡ 7b6294de-77bb-11eb-2111-01df80d418e5
+[filas*columnas for filas in (5, 10, 20), columnas in (0, 1, 2)]
 
 # ╔═╡ 6d76f2f2-3e67-11eb-04dc-0580a2072dda
 md"""
@@ -1347,7 +1363,9 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═b99bea60-7601-11eb-3f06-ef522296b39d
 # ╠═00da49d0-7602-11eb-31f1-dfe5b07d6349
 # ╟─7229577a-3e67-11eb-0c71-f383056175d1
-# ╠═4e913d8e-3ea6-11eb-25e6-e3d03de7b3e0
+# ╠═841f7430-77b2-11eb-180b-11a3ec034424
+# ╠═129267b0-77b6-11eb-2fa3-5914fd885d43
+# ╠═7b6294de-77bb-11eb-2111-01df80d418e5
 # ╟─6d76f2f2-3e67-11eb-04dc-0580a2072dda
 # ╠═e8200592-3e7a-11eb-0711-ddf863314bee
 # ╟─685698fa-3e67-11eb-2698-937dd4801b5c
