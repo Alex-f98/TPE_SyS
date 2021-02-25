@@ -539,6 +539,7 @@ end
 
 
 # ╔═╡ d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
+#=
 #EL PROBLEMA ESTA ACA!!!! EL VECTOR QUE TIENE QUE GENERAR ES 8 VECES MAS GRANDE!!!! 
 function submuestrear(x,M)
 	#y = zeros(length(x)*M) #me creo un vector para rellenar
@@ -546,12 +547,31 @@ function submuestrear(x,M)
 	sample = x[1:M:end]
 	return sample
 end
+=#
 
 # ╔═╡ cc11a150-73e3-11eb-0459-4fedbabe462d
+#=
 #finalmente funcion que me submuestrea y devuelve e. .ogg a frecuencia de muestreo sr/8.
 function reduce_sampleRate(x,fm)
 	M = 8 #44100 Hz a 5512.5 Hz
 	return submuestrear(conv(hs,x),M)
+end
+=#
+
+# ╔═╡ 16be5cc0-7777-11eb-1b8e-b765ed6d37cd
+begin
+	
+	function submuestrear(x,M)
+		sample = x[1:M:end]
+		return sample
+	end	
+	
+#finalmente funcion que me submuestrea y devuelve e. .ogg a frecuencia de muestreo sr/8.
+	function reduce_sampleRate(x,fm)
+		M = 8 #44100 Hz a 5512.5 Hz
+		return submuestrear(conv(hs,x),M)
+	end
+	
 end
 
 # ╔═╡ af4f3da4-3e67-11eb-3cc6-3378e0c12667
@@ -693,41 +713,32 @@ length(fbands)
 
 
 # ╔═╡ 7316d5a0-754d-11eb-0a4b-93e180b3bf94
-begin
+#=begin
 	div_fil= floor.(Int, [2048*(log(i)/log(22)) for i in 1:1:22])
 	div_fil[1,1]=1;
 end
-
-
-# ╔═╡ a515084e-754e-11eb-0bfb-ad5e4b306bef
-div_fil
-
-# ╔═╡ eb421110-7549-11eb-24e8-c76d0d5ecf99
-length(div_fil)
+=#
 
 # ╔═╡ e6a127a0-751b-11eb-34ac-418d1ad01639
 begin
-	ovlp= floor(Int, order1 - (31/32)*length(hamming(order1))) #esto da entero, 64.
+	ovlp= 1827
+	#floor(Int, (31/32)*length(hamming(order1)))
+	#2048*(31/32) fui bajando el overlap para que me quede mejor la huella.
 	s= stft(ssm; overlap= ovlp, window= hamming(order1), nfft= order1);
 	S=s[1:div(2048, 2), :]
 end
 
 # ╔═╡ 46b25e4e-7609-11eb-3ef8-bff9a5a5898d
 begin
-	fil, col = size(s);
-	div_fil_f = floor.(Int, (div(fil,2) .* fbands[1:end]) ./ (sr2/2))
+	#fil, col = size(s);
+	fil, col = size(S)
+	div_fil_f = floor.(Int, (fil#=div(fil,2)=# .* fbands[1:end]) ./ (sr2/2))
 end
-#son muy pocas las muestras que toma!! esto esta bien?
 
-# ╔═╡ 9f9d4a30-760d-11eb-04f5-d1352a5773df
-length(div_fil_f)
-
-# ╔═╡ 5dbb0cc0-755d-11eb-0f17-df0443bb687b
-
-#ss,f,t = spectrogram(tst; noverlap= ovlp, window=hamming(order1), nfft=order1)
 
 # ╔═╡ 7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
-#begin
+#=
+begin
 	function mean_nfil(mat, i, j, wfil)
 		@assert wfil >= 1
 		aux=(abs(mat[i,j]))^2;
@@ -747,8 +758,11 @@ length(div_fil_f)
 	end
 end
 
+=#
+
 # ╔═╡ 8a696ed0-7524-11eb-0764-214ebea3d1e7
-#E = let
+#=
+E = let
 	
 	fil_band(w_seg) = sr2*(fbands[w_seg] - fbands[w_seg + 1]); ##muestras que hay en 	      															esas frec
 	fil_mtr, col_mtr = size(s);
@@ -761,7 +775,8 @@ end
 				#for filE in 1:1:length(div_fil) ]
 	
 end
-#imposible!!!! no puedo no puedo!!! quiero armar con los vectores una matriz!!!!	
+#imposible!!!! no puedo no puedo!!! quiero armar con los vectores una matriz!!!!
+=#
 
 # ╔═╡ 4a342420-75df-11eb-35be-0bc9cc550163
 #para cada banda m en s calculla la media de los abs ^2 de las filas correspondientes.
@@ -795,11 +810,9 @@ begin
 	function H(s)
 		fils, cols = size(s)
 		filE= length(div_fil_f)-2
-		#filE= 
-			
-		#H= zeros(filE, cols)
+	
 		#[H[m,n] = bern(m, n+1) for m in 1:1:filE for n in 2:1:cols-1]
-		H = [bern(m, n+1) for m in 1:1: filE#=filE=#,  n in 1:1:cols-1#=cols-1=#]
+		H = [bern(m, n+1) for m in 1:1: filE,  n in 1:1:cols-1]
 		
 		return H
 	end
@@ -819,6 +832,25 @@ plot_huella(h)= Gray.(float.(h));
 
 # ╔═╡ 42c730b0-7625-11eb-1c4e-6b516c1eb2e7
 plot_huella(huella)
+
+# ╔═╡ 7b0ea820-7771-11eb-2c41-15bf560369ab
+#=
+begin
+	
+	sp= stft(x5k, window= hamming(2048), nfft= 2048, overlap= 1827, fs=sr5k)
+	sppow= abs.(sp).^2
+	freqs= range(0:step=sr5k/size(srpow, 1), length= size(srpow, 1));
+	
+	nbans= map(fr ->findfirst(fr .< fbans), freqs)
+	nrg= zeros(length(fbans)-1, size(srpow,2))
+	
+	for i in 1:length(fbands)-1
+		nrg[[i], :] .= sum(sppow[nbans . == i+1, :]; dims=1)
+	end
+	
+	huella= diff(diff(nrg; dims=2);dims=1) .>0
+end
+=#
 
 # ╔═╡ 89743a62-3e67-11eb-209e-9b1f3cc84e34
 md"""
@@ -860,8 +892,65 @@ end
 ```
 """
 
-# ╔═╡ 741304fe-3ea4-11eb-15e8-09908d98ecb3
+# ╔═╡ d4bbda22-7797-11eb-1835-ddf37a08cc0f
 
+
+# ╔═╡ 304f1ef0-7776-11eb-1926-13a4a3e50e26
+#generar_huella(fname::String) = generar_huella(load_audio(fname));
+
+# ╔═╡ 76604f60-777e-11eb-2543-09be49dcc4b1
+#Gnero las mismas funciones de antes modificadas para poner usarlas mejor en generar_huella.
+
+begin
+#calcula la energia para cada fila y columna de la matriz s.	
+	function EE(s, nb, m, n)
+		return mean( abs.( s[ nb[m]:nb[m + 1] , n] ).^2 )
+	end
+#devuelve 0 o 1	segun se cumpla la condicion.
+	function bern2(s, nb, m, n)
+	  (EE(s,nb,m+1,n) - EE(s,nb,m,n))>(EE(s,nb,m+1,n-1)-EE(s,nb, m, n-1)) && return 1
+	  return 0
+	end 
+end
+
+# ╔═╡ 4b0b7360-7776-11eb-1bd5-ddd0c82e9e06
+
+#genera la huella de x.	
+function generar_huella!(x::Vector) 					#debe recibir un vector.
+	
+	xsrsub = reduce_sampleRate(x, sr); 					  #sr=44100 variable global.
+	rsr = sr / 8
+
+	order= 2048
+	ovlp= 1942 		#1827
+
+	s= stft(xsrsub; overlap= ovlp, window= hamming(order), nfft= order);
+	S= s[1:div(order, 2), :] 			#se puede hacer en una linea??
+
+	fbands= exp.(range(log(300); stop=log(2e3), length=22)) #divido en bandas.
+	filS, colS = size(S);
+	div_fil = floor.(Int, (filS .* fbands[1:end]) ./ (rsr/2)) #busco el indice.
+
+	filE= length(div_fil)-2
+
+#devuelve la matriz H.	
+	H= [bern2(S, div_fil, m, n + 1) for m in 1:1: filE,  n in 1:1:colS-1]
+
+	return H
+end;
+	
+
+
+# ╔═╡ d4179090-77a7-11eb-3c1b-4da6e8152c16
+function generar_huella(fname::String )	
+	generar_huella!(to_mono(fname))
+end
+
+# ╔═╡ 741304fe-3ea4-11eb-15e8-09908d98ecb3
+hhuella= generar_huella("Pink.ogg")
+
+# ╔═╡ ed9dce70-7785-11eb-27b2-8d22fa913c96
+plot_huella(hhuella)
 
 # ╔═╡ 855a7d2e-3e67-11eb-0f46-a5c786d5caf3
 md"""
@@ -876,6 +965,33 @@ md"""
 #Fs frecuencia sampling
 #n largo de ventana en muestras
 #Ov overlap, si es 50% de n se duplican las muetras por segundo
+
+# ╔═╡ 98e48b10-7791-11eb-38b7-efc93f1af7a5
+let
+	t_s=1/fc;
+	t_win2=0.37 						#segun elpaper
+	fm=5512.5
+	muestras= t_win2 * fm 				#2040muestras.
+		
+end
+
+# ╔═╡ 4df7d760-7796-11eb-2563-932eb8c9fece
+md""" mediante la siguiente funcion se calcula la densidad pedida, de manera de encontrar 25 muestras por segundo segun las columnas de la matriz h, luego con ello se encontró que con un overlap de 1942 y una ventana de 2048 se consigue lo pedido"""
+
+# ╔═╡ 7a02bdf0-7793-11eb-3606-9168a11719a4
+#col(H)/(tiempo de la canción[seg])
+function density(length_song, colH, fr)
+	
+	time_song= length_song / fr
+	dst= colH / time_song
+	return dst
+end
+
+# ╔═╡ c19daa60-7795-11eb-03a6-d134602f316a
+filH, colH = size(hhuella)
+
+# ╔═╡ e66049e2-7793-11eb-0560-1189121d97f9
+density(length(tst), colH,sr/2)  #muestras por segundo
 
 # ╔═╡ 81717fc8-3e67-11eb-05fc-5bde46597f8a
 md"""
@@ -947,7 +1063,11 @@ begin
 end;
 
 # ╔═╡ e9255b8c-3e74-11eb-2960-5d01b0c99b13
-# db = generar_DB(songs; dir=songsdir);
+db = generar_DB(songs; dir=songsdir);
+
+# ╔═╡ 5d0a5800-779a-11eb-2f2c-335d6f94ef06
+db
+#db es un vector de vectores!
 
 # ╔═╡ 7c7c1424-3e67-11eb-1da0-5dbad0171b20
 md"""
@@ -998,18 +1118,25 @@ md"""
 **Evalúe la tasa de aciertos del algoritmo identificando segmentos de duración $T$ con tiempo inicial elegido al azar de canciones elegidas al azar (vea la función `rand`). Las canciones deberán ser las mismas que utilizó para confeccionar la base de datos. Realice la evaluación para 50 segmentos con duración T  entre 5, 10 y 20 segundos cada vez (150 evaluaciones en total) obteniendo la tasa de aciertos en cada caso.**
 """
 
-# ╔═╡ f91ed600-3ea4-11eb-3945-6999aaa4d0dd
-begin
-	function addsnr!(x, snr)
-		a= var(x)/10^(snr/10)
-		x .+= sqrt(a) * randn(length(x))
-	end
-	addsnr(x, snr)=addsnr!(copy(x), snr);
-end;
+# ╔═╡ 7d82ea60-779b-11eb-2e75-8997f2c88b53
+#toma una duracion aleatoria procesa la huella y devuelve true si fue encontrado exitosamente.
+function is_song(t)
+	
+	nduration= floor(Int, t * sr )					#seg-->muestras.
+	song= rand(songs)								#elijo una cancion al azar.
+	rsong= to_mono(joinpath(songsdir, song))		#cargo la cansion.
+	ninit= rand(1: length(rsong) - nduration) 		#elijo inicio al azar.
+	x= rsong[ninit:ninit + nduration - 2] 		#obtengo el segmento a testear.
+	
+	return song == songs[query_DB(db, #=hhuella=# generar_huella!(x) )]
+end
+
+# ╔═╡ c970df70-77ac-11eb-384a-9b8a5e2e9547
+is_song(50)
 
 # ╔═╡ b99bea60-7601-11eb-3f06-ef522296b39d
-#[ mean(test(segdur) for _ in 1:50 )
-#		for segdur 	in (5, 10, 20)]
+ [mean(is_song(t) for _ in 1:50 )
+		for t 	in (5, 10, 20)]
 
 # ╔═╡ 00da49d0-7602-11eb-31f1-dfe5b07d6349
 
@@ -1022,7 +1149,13 @@ md"""
 """
 
 # ╔═╡ 4e913d8e-3ea6-11eb-25e6-e3d03de7b3e0
-
+begin
+	function addsnr!(x, snr)
+		a= var(x) / 10^(snr/10)
+		x .+= sqrt(a) * randn(length(x))
+	end
+	addsnr(x, snr)=addsnr!(copy(x), snr);
+end;
 
 # ╔═╡ 6d76f2f2-3e67-11eb-04dc-0580a2072dda
 md"""
@@ -1107,10 +1240,10 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
 # ╟─a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
-# ╟─d132a762-3ea3-11eb-3494-692576a31f34
-# ╟─28c5ed26-3e6b-11eb-1d44-01e209b92f00
-# ╟─92649f90-73cd-11eb-0df8-4958d753607d
-# ╟─a2fa88b0-73cd-11eb-1336-9fbf72b0ddd8
+# ╠═d132a762-3ea3-11eb-3494-692576a31f34
+# ╠═28c5ed26-3e6b-11eb-1d44-01e209b92f00
+# ╠═92649f90-73cd-11eb-0df8-4958d753607d
+# ╠═a2fa88b0-73cd-11eb-1336-9fbf72b0ddd8
 # ╠═a7727c3e-73cd-11eb-3bdc-8dd64b6b43ad
 # ╟─a83a1200-73cd-11eb-353c-751703d316cd
 # ╟─a56414d0-7621-11eb-0140-e57ff8c679ff
@@ -1145,12 +1278,13 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═2fcff8a0-761d-11eb-12d0-1736a6b45e85
 # ╠═b40552ae-73d8-11eb-0fa9-333246437734
 # ╠═6ef5b922-73e3-11eb-0504-652233cd6dda
-# ╠═d08961ee-7550-11eb-0529-513ae044a205
+# ╟─d08961ee-7550-11eb-0529-513ae044a205
 # ╠═72acf4c0-73e3-11eb-1975-77a7c0a9c562
 # ╠═7c44b4a0-73e3-11eb-03c4-afb2354639a0
-# ╠═d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
-# ╠═cc11a150-73e3-11eb-0459-4fedbabe462d
-# ╠═af4f3da4-3e67-11eb-3cc6-3378e0c12667
+# ╟─d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
+# ╟─cc11a150-73e3-11eb-0459-4fedbabe462d
+# ╠═16be5cc0-7777-11eb-1b8e-b765ed6d37cd
+# ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
 # ╠═3aa5434e-3ea4-11eb-20aa-b15564d4eb90
 # ╠═38c05a80-73e4-11eb-274d-d538d2e3fb65
 # ╟─982538c4-3e67-11eb-229e-dd2531a540d6
@@ -1170,12 +1304,8 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═aeb41d00-7513-11eb-0980-9b6250c020af
 # ╠═c5806300-7549-11eb-2268-0fb465e3126a
 # ╠═7316d5a0-754d-11eb-0a4b-93e180b3bf94
-# ╠═a515084e-754e-11eb-0bfb-ad5e4b306bef
-# ╠═eb421110-7549-11eb-24e8-c76d0d5ecf99
 # ╠═e6a127a0-751b-11eb-34ac-418d1ad01639
 # ╠═46b25e4e-7609-11eb-3ef8-bff9a5a5898d
-# ╠═9f9d4a30-760d-11eb-04f5-d1352a5773df
-# ╠═5dbb0cc0-755d-11eb-0f17-df0443bb687b
 # ╟─7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
 # ╟─8a696ed0-7524-11eb-0764-214ebea3d1e7
 # ╠═4a342420-75df-11eb-35be-0bc9cc550163
@@ -1186,20 +1316,34 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═d33d59f0-75f6-11eb-2c74-1b8e3be2f9c1
 # ╠═5bf232a0-7568-11eb-302c-a17935859a8a
 # ╠═42c730b0-7625-11eb-1c4e-6b516c1eb2e7
+# ╟─7b0ea820-7771-11eb-2c41-15bf560369ab
 # ╟─89743a62-3e67-11eb-209e-9b1f3cc84e34
+# ╠═d4bbda22-7797-11eb-1835-ddf37a08cc0f
+# ╠═304f1ef0-7776-11eb-1926-13a4a3e50e26
+# ╠═76604f60-777e-11eb-2543-09be49dcc4b1
+# ╠═d4179090-77a7-11eb-3c1b-4da6e8152c16
+# ╠═4b0b7360-7776-11eb-1bd5-ddd0c82e9e06
 # ╠═741304fe-3ea4-11eb-15e8-09908d98ecb3
+# ╠═ed9dce70-7785-11eb-27b2-8d22fa913c96
 # ╟─855a7d2e-3e67-11eb-0f46-a5c786d5caf3
-# ╠═088ca198-3e74-11eb-0cf3-23a983165a0d
+# ╟─088ca198-3e74-11eb-0cf3-23a983165a0d
+# ╟─98e48b10-7791-11eb-38b7-efc93f1af7a5
+# ╟─4df7d760-7796-11eb-2563-932eb8c9fece
+# ╠═7a02bdf0-7793-11eb-3606-9168a11719a4
+# ╠═c19daa60-7795-11eb-03a6-d134602f316a
+# ╠═e66049e2-7793-11eb-0560-1189121d97f9
 # ╟─81717fc8-3e67-11eb-05fc-5bde46597f8a
 # ╠═b91537ac-3ea4-11eb-14d6-d341c535d83e
 # ╟─73333e92-3e85-11eb-26b6-7f0309ef2ee9
 # ╟─feb5d512-3e85-11eb-0116-29e4d9539595
 # ╠═0cf7ba9c-3e74-11eb-18e2-c38aa20f9e9a
 # ╠═e9255b8c-3e74-11eb-2960-5d01b0c99b13
+# ╠═5d0a5800-779a-11eb-2f2c-335d6f94ef06
 # ╟─7c7c1424-3e67-11eb-1da0-5dbad0171b20
 # ╠═415e32e6-3e76-11eb-17fa-23bd653fb975
 # ╟─76ce23dc-3e67-11eb-0be0-91b6781840fb
-# ╟─f91ed600-3ea4-11eb-3945-6999aaa4d0dd
+# ╠═7d82ea60-779b-11eb-2e75-8997f2c88b53
+# ╠═c970df70-77ac-11eb-384a-9b8a5e2e9547
 # ╠═b99bea60-7601-11eb-3f06-ef522296b39d
 # ╠═00da49d0-7602-11eb-31f1-dfe5b07d6349
 # ╟─7229577a-3e67-11eb-0c71-f383056175d1
