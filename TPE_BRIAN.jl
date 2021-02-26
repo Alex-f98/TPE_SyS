@@ -375,6 +375,9 @@ end
 # ╔═╡ 98aab180-73cf-11eb-092d-cb520eba3c36
 md""" Se puede observar la diferencia entre los lobulos secundarios entre la ventana ideal y la de hamming, la relacion entre el primer lobulo y el segundo es mucho mejor con hamming. """
 
+# ╔═╡ 8972ef20-77bc-11eb-192d-0732917782b0
+#@bind a html ”<input type = 'range' min = '1' max = '10 'step =' 0.25 '/>”
+
 # ╔═╡ d61f59b0-73d1-11eb-0edb-938b1f3defa2
 let
 	order = 501;
@@ -538,17 +541,6 @@ let
 end
 
 
-# ╔═╡ d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
-#=
-#EL PROBLEMA ESTA ACA!!!! EL VECTOR QUE TIENE QUE GENERAR ES 8 VECES MAS GRANDE!!!! 
-function submuestrear(x,M)
-	#y = zeros(length(x)*M) #me creo un vector para rellenar
-	#[y[1 + M*(i-1)]= x[i] for i=1:length(x)] # aca hago inline loops :)
-	sample = x[1:M:end]
-	return sample
-end
-=#
-
 # ╔═╡ cc11a150-73e3-11eb-0459-4fedbabe462d
 #=
 #finalmente funcion que me submuestrea y devuelve e. .ogg a frecuencia de muestreo sr/8.
@@ -711,13 +703,6 @@ length(fbands)
 # ╔═╡ c5806300-7549-11eb-2268-0fb465e3126a
 #div_fil = floor.(Int, range(1; stop=10^log(2048), length=22))
 
-
-# ╔═╡ 7316d5a0-754d-11eb-0a4b-93e180b3bf94
-#=begin
-	div_fil= floor.(Int, [2048*(log(i)/log(22)) for i in 1:1:22])
-	div_fil[1,1]=1;
-end
-=#
 
 # ╔═╡ e6a127a0-751b-11eb-34ac-418d1ad01639
 begin
@@ -966,15 +951,6 @@ md"""
 #n largo de ventana en muestras
 #Ov overlap, si es 50% de n se duplican las muetras por segundo
 
-# ╔═╡ 98e48b10-7791-11eb-38b7-efc93f1af7a5
-let
-	t_s=1/fc;
-	t_win2=0.37 						#segun elpaper
-	fm=5512.5
-	muestras= t_win2 * fm 				#2040muestras.
-		
-end
-
 # ╔═╡ 4df7d760-7796-11eb-2563-932eb8c9fece
 md""" mediante la siguiente funcion se calcula la densidad pedida, de manera de encontrar 25 muestras por segundo segun las columnas de la matriz h, luego con ello se encontró que con un overlap de 1942 y una ventana de 2048 se consigue lo pedido"""
 
@@ -1149,14 +1125,14 @@ function is_song(t; snr=0, noise::Bool=false)#keyword arguments
 	song= rand(songs)								#elijo una cancion al azar.
 	rsong= to_mono(joinpath(songsdir, song))		#cargo la cansion.
 	ninit= rand(1: length(rsong) - nduration) 		#elijo inicio al azar.
-	x= rsong[ninit:ninit + nduration - 2] 		#obtengo el segmento a testear.
+	x= rsong[ninit:ninit + nduration - 2] 		    #obtengo el segmento a testear.
 	
 	if noise == true
 		x= add_noise(x, snr)
 	end
 		
 	
-	return song == songs[query_DB(db, #=hhuella=# generar_huella!(x) )]
+	return song == songs[query_DB(db, generar_huella!(x) )]
 end
 
 # ╔═╡ c970df70-77ac-11eb-384a-9b8a5e2e9547
@@ -1166,12 +1142,98 @@ is_song(50)
  [mean(is_song(t) for _ in 1:50 )
 		for t 	in (5, 10, 20)]
 
+# ╔═╡ 8fe96ca0-77ce-11eb-1d58-27201d27fc2f
+
+
 # ╔═╡ 129267b0-77b6-11eb-2fa3-5914fd885d43
- [mean(is_song(t; snr= algo, noise=true) for _ in 1:50 )
-		for t in (5, 10, 20), algo in (0, 10, 20)]
+#esto se toma su tiempo, descomentarlo para las pruebas 
+#[mean(is_song(t; snr= algo, noise=true) for _ in 1:20 )
+		for t in (4.5, 7, 12, 15, 17, 20, 23, 25, 27), 
+			algo in (0, 10, 20)
+		]
 
 # ╔═╡ 7b6294de-77bb-11eb-2111-01df80d418e5
-[filas*columnas for filas in (5, 10, 20), columnas in (0, 1, 2)]
+#[filas*columnas for filas in (5, 10, 20), columnas in (0, 1, 2)]
+
+# ╔═╡ 713783c0-77bd-11eb-2b34-17a3651f41c9
+md""" 
+
+a continuacion se muestras distintas tablas las cuales contienen las probabilidades de acierto experimentales con ruido agregado de 0dB, 10dB y 20dB.
+
+Tabla para 50 segmentos con ruidos para t= 5,10 y 20 segundos.
+
+|T[seg]| 0dB    | 10dB   | 20dB |
+|:-:   | :----: | :----: | ---: |
+|5     | 0.94   | 1.0    | 1.0  |
+|10    | 0.98   | 1.0    | 1.0  |
+|20    | 0.98   | 1.0    | 1.0  |
+
+
+
+Matriz para 1 segmento con ruidos para t= 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 segundos.
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5|1.0|  1.0|  1.0|
+|7  |1.0|  1.0|  1.0|
+|12 |1.0|  1.0|  1.0|
+|15 |0.0|  1.0|  1.0|
+|17 |1.0|  1.0|  1.0|
+|20 |1.0|  1.0|  1.0|
+|23 |1.0|  1.0|  1.0|
+|25 |1.0|  1.0|  1.0|
+|27 |1.0|  1.0|  1.0|
+
+La siguiente tabla muestra las probabilidades para 5 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5|1.0  |1.0  |1.0
+|7  |1.0  |1.0  |1.0
+|12 |1.0  |1.0  |1.0
+|15 |1.0  |1.0  |1.0
+|17 |1.0  |1.0  |1.0
+|20 |1.0  |1.0  |1.0
+|23 |1.0  |1.0  |1.0
+|25 |1.0  |1.0  |1.0
+|27 |1.0  |1.0  |1.0
+
+La siguiente tabla muestra las probabilidades para 10 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5|1.0  |1.0  |1.0
+|7  |1.0  |1.0  |1.0
+|12 |1.0  |1.0  |1.0
+|15 |1.0  |1.0  |1.0
+|17 |0.9  |1.0  |1.0
+|20 |1.0  |1.0  |1.0
+|23 |1.0  |1.0  |1.0
+|25 |1.0  |1.0  |1.0
+|27 |1.0  |1.0  |1.0
+
+
+La siguiente tabla muestra las probabilidades para 20 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5|0.9  |1.0  |1.0
+|7  |0.95 |1.0  |1.0
+|12 |1.0  |1.0  |1.0
+|15 |1.0  |1.0  |1.0
+|17 |0.9  |1.0  |1.0
+|20 |1.0  |1.0  |1.0
+|23 |0.95 |1.0  |1.0
+|25 |1.0  |1.0  |1.0
+|27 |1.0  |1.0  |1.0
+
+
+dado que el tiempo de procesamiento aumenta a medida que se aumentan los segmentos y los tiempos, hacer las pruebas anteriores con 50 segmentos puede llevar horas, por lo que no se hace la prueba.
+
+
+"""
 
 # ╔═╡ 6d76f2f2-3e67-11eb-04dc-0580a2072dda
 md"""
@@ -1251,7 +1313,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 """
 
 # ╔═╡ Cell order:
-# ╠═09062294-3e5f-11eb-176f-dfcbf841f111
+# ╟─09062294-3e5f-11eb-176f-dfcbf841f111
 # ╟─8f1394ee-3e63-11eb-0093-e75468460dc5
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
@@ -1274,6 +1336,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─b60ae59e-3e67-11eb-123e-11c0cba7d09e
 # ╠═4e904a84-3ea4-11eb-0c12-b1fccd5f7036
 # ╟─98aab180-73cf-11eb-092d-cb520eba3c36
+# ╠═8972ef20-77bc-11eb-192d-0732917782b0
 # ╠═d61f59b0-73d1-11eb-0edb-938b1f3defa2
 # ╟─f538d140-73d2-11eb-2248-abda76c139a5
 # ╠═d279d480-73d5-11eb-3cc8-310c3d312bd2
@@ -1297,8 +1360,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─d08961ee-7550-11eb-0529-513ae044a205
 # ╠═72acf4c0-73e3-11eb-1975-77a7c0a9c562
 # ╠═7c44b4a0-73e3-11eb-03c4-afb2354639a0
-# ╟─d8affe92-73f0-11eb-3dc8-9d6a8b152c6b
-# ╟─cc11a150-73e3-11eb-0459-4fedbabe462d
+# ╠═cc11a150-73e3-11eb-0459-4fedbabe462d
 # ╠═16be5cc0-7777-11eb-1b8e-b765ed6d37cd
 # ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
 # ╠═3aa5434e-3ea4-11eb-20aa-b15564d4eb90
@@ -1319,7 +1381,6 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═a46234e0-7513-11eb-21d2-8592c8fec31d
 # ╠═aeb41d00-7513-11eb-0980-9b6250c020af
 # ╠═c5806300-7549-11eb-2268-0fb465e3126a
-# ╠═7316d5a0-754d-11eb-0a4b-93e180b3bf94
 # ╠═e6a127a0-751b-11eb-34ac-418d1ad01639
 # ╠═46b25e4e-7609-11eb-3ef8-bff9a5a5898d
 # ╟─7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
@@ -1342,8 +1403,7 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═741304fe-3ea4-11eb-15e8-09908d98ecb3
 # ╠═ed9dce70-7785-11eb-27b2-8d22fa913c96
 # ╟─855a7d2e-3e67-11eb-0f46-a5c786d5caf3
-# ╟─088ca198-3e74-11eb-0cf3-23a983165a0d
-# ╟─98e48b10-7791-11eb-38b7-efc93f1af7a5
+# ╠═088ca198-3e74-11eb-0cf3-23a983165a0d
 # ╟─4df7d760-7796-11eb-2563-932eb8c9fece
 # ╠═7a02bdf0-7793-11eb-3606-9168a11719a4
 # ╠═c19daa60-7795-11eb-03a6-d134602f316a
@@ -1364,9 +1424,11 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╠═00da49d0-7602-11eb-31f1-dfe5b07d6349
 # ╟─7229577a-3e67-11eb-0c71-f383056175d1
 # ╠═841f7430-77b2-11eb-180b-11a3ec034424
+# ╠═8fe96ca0-77ce-11eb-1d58-27201d27fc2f
 # ╠═129267b0-77b6-11eb-2fa3-5914fd885d43
-# ╠═7b6294de-77bb-11eb-2111-01df80d418e5
-# ╟─6d76f2f2-3e67-11eb-04dc-0580a2072dda
+# ╟─7b6294de-77bb-11eb-2111-01df80d418e5
+# ╟─713783c0-77bd-11eb-2b34-17a3651f41c9
+# ╠═6d76f2f2-3e67-11eb-04dc-0580a2072dda
 # ╠═e8200592-3e7a-11eb-0711-ddf863314bee
 # ╟─685698fa-3e67-11eb-2698-937dd4801b5c
 # ╠═ea11dfe2-3e7a-11eb-19fa-db2ebfcfecdc
