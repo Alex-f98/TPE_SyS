@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.20
+# v0.12.21
 
 using Markdown
 using InteractiveUtils
@@ -169,6 +169,15 @@ html"""
 <h2 class="pm-node nj-subtitle">Identificación de canciones mediante huellas digitales acústicas</h2>
 """
 
+# ╔═╡ 82bdb9f0-7a26-11eb-0df3-0553dd890af1
+md"""
+- **Alumno: Brian Alex Fuentes Acuña.**
+
+- **Padron: 101785.**
+
+- **Curso: Rui Rojo.**
+"""
+
 # ╔═╡ adc46380-3e63-11eb-2422-5bfe1b5052ba
 md"""
 # Introducción
@@ -244,6 +253,9 @@ Luego, se reduce su frecuencia de muestreo, aprovechando que son las frecuencias
 # La frecuencia de muestreo está fija a 44100 Hz
 const sr = 44100
 
+# ╔═╡ 54e21790-7a14-11eb-14f3-9bf2cbf17fe6
+md""" Se carga el audio a procesar y se obtienen sus muestras en 2 columnas, canales estéreo."""
+
 # ╔═╡ d132a762-3ea3-11eb-3494-692576a31f34
 function load_audio(fn)
 	
@@ -255,8 +267,17 @@ function load_audio(fn)
     return collect(xraw)
 end
 
+# ╔═╡ aeea5400-794c-11eb-35b4-b763196181af
+f, col_Pink= size(load_audio("Pink.ogg"))
+
+# ╔═╡ 4612d502-7961-11eb-0a80-11d812178ad8
+md""" Se observa que cargando el audio se obtienen 441000 muestras para dos canales, sus columnas.
+
+Para obtener un solo canal se crea la función **to_mono()** quien recibe el audio con sus dos canales retornando un vector con las muestras promediadas
+."""
+
 # ╔═╡ 28c5ed26-3e6b-11eb-1d44-01e209b92f00
-# Wrapper para ver un vector de muestras de audio a 44100 Hz como un widget escuchable
+#Recibe las muestras del vector y las convierte en un audio para asi poder oirlo.
 sound(x) = SampleBuf(x, sr);
 
 # ╔═╡ 92649f90-73cd-11eb-0df8-4958d753607d
@@ -272,6 +293,9 @@ end
 tst = to_mono("Pink.ogg");
 
 
+# ╔═╡ b65f8000-7962-11eb-1ba6-213e0aac1846
+md""" Se puede escuchar el audio mono canal obtenido haciendo uso de la función **sound()** defina previamente."""
+
 # ╔═╡ a7727c3e-73cd-11eb-3bdc-8dd64b6b43ad
 sound(tst)
 
@@ -281,10 +305,10 @@ begin
   to_samp = 1*sr;     #quiero graficar el prmer segundo.
   n=1:1:to_samp;
   tseg = n./sr
-end
+end;
 
 # ╔═╡ a56414d0-7621-11eb-0140-e57ff8c679ff
-md""" Se grafica segundode la muestra del audio Pink.ogg para mostrarla en detalle"""
+md""" Se grafica un segundo de la muestra del audio Pink.ogg para mostrarla en detalle"""
 
 # ╔═╡ 1e7678f0-73ce-11eb-02a6-053cc2e84b2f
 plot(tseg,tst[n],
@@ -308,12 +332,17 @@ md"""
 **La PSD, ``S_{XX}``, la puede estimar como ``S_{X X}(\omega) = 1/T |X(\omega)|^2``, donde ``T`` es la duración del segmento temporal que usa para la estimación, o mejor aún, dividiendo al audio en segmentos, realizando la estimación anterior con cada uno, y finalmente promediándolas.**
 """
 
+# ╔═╡ 2b430db0-7963-11eb-3585-893f8168af1c
+md"""Para realizar lo pedido se hace uso de la función **fft()** quien recibe las muestras y calcula la _transformada discreta de Fourier_, para calcular la PSD según lo indica la formula dada se necesita la continua por ello habrá que dividir por la frecuencia de muestreo.
+Luego la función hará uso de ellos calculándola según lo sugerido, se divide el audio en segmentos obteniendo la PSD para cada uno y promediándolas
+."""
+
 # ╔═╡ 4fc8c804-3ea4-11eb-3e97-eb6709f1c0aa
-#tener en cuenta que fft te da la transformada discreta de fourier, yo quiero la continua. por la relacion que hay yo tengo que dividir por la frecuencia de muestreo.
+
 ## retorna el PSD en dB.
 
 function PSD(x, n, t_win)
-	#fft(tst_seg) ./ sr == X(W).
+	
 	return mean(10log10.(abs.( fft(tst_seg) ./ sr ).^2 ./t_win)
 	for tst_seg in arraysplit(x, n, 0)
 	)
@@ -322,8 +351,8 @@ end
 # ╔═╡ 56f4c0b0-73ce-11eb-09fd-fba3b409e4d9
 begin
 	psd = let
-			n = 1000; #4410 #cantidad de muestras por segmento
-			t_win = n / sr; #ancho del segmento.
+			n = 1000; 			#4410 	#cantidad de muestras por segmento
+			t_win = n / sr; 			#ancho del segmento.
 			PSD(tst, n, t_win)
 	end
 
@@ -335,7 +364,7 @@ begin
 end
 
 # ╔═╡ d987dc10-7621-11eb-26d9-d148f796fc11
-md""" Se procede a graficar la PSD, notar que para las frecuencias mas bajas es donde la PSD es mayor, esto sugiere que que lo importante de la señal se concentra en unrango menor de frecuencias y podriamos despreciar los que sucede a mas altas frecuencias. """
+md""" Se procede a graficar la PSD, notar que para las frecuencias más bajas es donde la PSD es mayor, esto sugiere que lo importante de la señal se concentra en un rango menor de frecuencias y se podría despreciar lo que sucede a más altas frecuencias. """
 
 # ╔═╡ 7776221e-73ce-11eb-003c-857b22a7e7c1
 plot(f_psd,
@@ -359,48 +388,75 @@ md"""
 **Mediante la función `fft`, obtenga el espectro de una ventana rectangular y una de Hamming de igual duración y grafique su potencia en escala logarítmica en un mismo gráfico para compararlos. ¿Cuál es la resolución en frecuencia de cada ventana? Al realizar un espectrogama, ¿qué ventaja tiene utilizar la ventana de Hamming frente a la rectangular?**
 """
 
+# ╔═╡ de8b8c70-7964-11eb-3127-d3731697c053
+md""" Se procede a graficar su densidad espectral de energía siendo que este aporta lo mismo para lo que se quiere analizar.
+La curva azul corresponde a una ventana rectangular mientras que la roja a la ventana de hamming
+ """
+
 # ╔═╡ 4e904a84-3ea4-11eb-0c12-b1fccd5f7036
 let
 	normalize(x) = x ./ sum(x)
 	plot()
-	plotwin(win) = plot!(log.( ( abs.(fft(padright(normalize(win(41)), 501))) ).^2 );
-	legend= false,
-	xlims=(0, 150), ylims=(-15, 2), 
-	ylabel=" DSP dB ", title = "densidad espectral de
-	energia")
-	foreach(plotwin, [ones, hamming],)
+	plotwin(win) = plot!(range(0; stop=2pi, length=5000 ),
+		log.( ( abs.(fft(padright(normalize(win(41)), 5000#=501=#))) ).^2 );
+		legend= false,
+		xlims=(0, pi), ylims=(-15, 2), 
+		ylabel=" DSP dB ",
+		xlabel= " Ω ",
+		title = "densidad espectral de energia")
+	foreach(plotwin, [rect, hamming],)
 	plot!()
 end
 
 # ╔═╡ 98aab180-73cf-11eb-092d-cb520eba3c36
-md""" Se puede observar la diferencia entre los lobulos secundarios entre la ventana ideal y la de hamming, la relacion entre el primer lobulo y el segundo es mucho mejor con hamming. """
+md""" Se puede observar la diferencia entre los lóbulos secundarios entre la ventana rectangular y la de hamming, la relación entre el primer lóbulo y el segundo es mucho mejor con hamming.
 
-# ╔═╡ 8972ef20-77bc-11eb-192d-0732917782b0
-#@bind a html ”<input type = 'range' min = '1' max = '10 'step =' 0.25 '/>”
+Dado que el grado de fugas depende de la amplitud relativa del lóbulo principal frente a los lóbulos laterales, la ventana de hamming tiene mejor compromiso entre estas (a costa de un decaimiento más lento en alta frecuencia), además se sabe que la anchura del lóbulo principal y la amplitud relativa de los lóbulos secundarios dependen del ancho de la ventana.
+ """
 
 # ╔═╡ d61f59b0-73d1-11eb-0edb-938b1f3defa2
 let
 	order = 501;
 	Hamm = specplot(tst; fs=sr, window=hamming(order), title= "Hamming")
-	Rect = specplot(tst; fs=sr, window=ones(order), title= "rectangular")
+	Rect = specplot(tst; fs=sr, window=rect(order), title= "rectangular")
 	
 	plot(Hamm, Rect)
 end
-#ver como hacer el grafico iterativo y poder apreciar mejor la resolucion espectral.
-#Revisar lo de abajo. TIENE QUE VER CON EL ORDEN DEL FILTRO QUE TOME, LA DISTINCION DE FRECUENCIAS.
+
 
 
 # ╔═╡ f538d140-73d2-11eb-2248-abda76c139a5
-md"""
+#=md"""
 El problema que tiene la ventana rectangular esta en sus discontinuidades, haciendo que lal señal se
 distorcione, esto se puede ver mejor en la DSP donde claramente se ve como aparece un lobulo
 secundario bastante proximo al principal a comparacion del de hamming donde el lobulo secundario
 se vé mas atenuado dado que este no tiene discontinuidades. Si se observa los diagramas espectrales
 se puede ver que en la ventana rectangular para frecuencias muy altas todavia hay picos de amplitud
 elevados, mientras que en la de hamming estos "picos" se centran en las bajas freucencias"""
+=#
 
-# ╔═╡ d279d480-73d5-11eb-3cc8-310c3d312bd2
+# ╔═╡ c0621930-796e-11eb-1a94-a118feca6e6b
+md""" La resolución en frecuencia tiene que ver con el ancho del lóbulo principal, esto porque al multiplicar la señal por una ventana se convolucionan en el espectro.
 
+
+El ancho del lóbulo principal tiene un papel importante en la resolución en frecuencia. 
+Si el ancho del lóbulo principal se estrecha es posible diferenciar dos componentes de frecuencia cercanas. Cuando el lóbulo principal se estrecha, con lo cual se incrementa la resolución en frecuencia, la energía de la ventana es distribuida entre los lóbulos laterales y las pérdidas espectrales son más grandes.
+
+De manera ideal se busca que el espectro de una ventana deba parecer a un impulso y estar confinado a un lóbulo lateral tan estrecho como sea posible y con tan poca energía en los lóbulos laterales como sea posible
+
+."""
+
+# ╔═╡ 1ae45790-7a1b-11eb-03b9-a3212ee88756
+md""" Según el _Oppenheim-Schafer_ se puede estimar el ancho del lóbulo principal de las siguientes formas :
+
+- Hamming: $\frac{8 \pi}{M}$= ~0,62  		con M=41.
+- Rectangular: $\frac{4 \pi}{M+1}$= 0,3  	con M=41.
+
+Midiendo el ancho del lóbulo principal se obtiene 0.64 para Hamming y 0.28 para la rectangular siendo estas la resolución en frecuencia.
+
+Notar que el ancho del lóbulo principal de la ventana de hamming es el doble que la rectangular.
+
+"""
 
 # ╔═╡ b2025250-3e67-11eb-39a2-73292bbf17c9
 md"""
@@ -410,15 +466,16 @@ md"""
 
 # ╔═╡ 4c56bc6c-3ea4-11eb-01e7-7b26c1d054f0
 md"""
-La velocidad de muestreo puede ser reducida por un factor entero M= 8, haciendo una decimacion de la señal discreta generando una nueva secuencia $ x_d[n] $ .
+La velocidad de muestreo puede ser reducida por un factor entero M= 8, haciendo una declinación de la señal discreta generando una nueva secuencia $ x_d[n] $ .
 
-$$x_d[n] = x_d[m*M] = x_c[m*MT]$$, con T:periodo de muestreo
+$$x_d[n] = x_d[m*M] = x_c[m*MT]$$, con T: periodo de muestreo.
 
 En el espectro esto se puede ver con amplitud 1/N y ancho de banda desde 
 $-M*\Omega_m$ a $M*\Omega_m$
-entonces la reduccion en frecuencia de muestreo puede generar un traslape para $\Omega_N > \pi/M$ . 
+entonces la reducción en frecuencia de muestreo puede generar un traslape para $\Omega_N > \pi/M$ . 
 
-Por ello para no perder informacion se realiza un ltro anti-aliasin antes del submuestreo.
+Por ello para no perder información se realiza un filtro anti-aliasin antes del submuestreo.
+
 
 
 """
@@ -432,22 +489,38 @@ end
 # ╔═╡ c3a33cae-73d7-11eb-2707-d3604f680c0c
 begin
 
-fc= 2322#2756; 				#frecuencia de corte(hz) fc < fs/2 = 44100/2.
+fc= 2322#2756; 				#frecuencia de corte(hz) fc < fs/2 = (44100/8)/2.
 OmegaC = (2*pi*fc)/sr;
-end
+end;
 
 # ╔═╡ 1500ddb0-73e7-11eb-024b-1f68d5ac7525
-md""" Observando el grafico de la PSD y teniendo en cuenta la cota dada por Nyquist se elige una frecuencia de corte razonable para la señal, de 2300 para no estar tan al limite de Nyquist. """
+md""" Observando el grafico de la PSD y teniendo en cuenta la cota dada por Nyquist de fc < sr2/2=~2756 se elige una frecuencia de corte razonable para la señal de 2322 para no estar tan al limite de Nyquist. """
+
+# ╔═╡ b07a0860-79d3-11eb-197f-4ba2019e2521
+
 
 # ╔═╡ 5fef73e0-73e7-11eb-36e6-d1a47f2c456c
+md""" El retardo esta dado por (N - 1)/2 donde N es el ancho de la ventana, sabieno que las muestras y el tiempo estan relacionada por la frecuencia de muestreo, sera entonces:
+ $\frac{N - 1}{2}$.$\frac{1}{sr}$ < 1mS. entonces para cumplir con lo pedido mi N < 88
 
+"""
 
 # ╔═╡ 27b2c6d0-73d8-11eb-33d5-e779bb4bf27d
 begin
-	H_ideal(Ω) = u(Ω + OmegaC) - u(Ω - OmegaC)
-	plot(H_ideal, -π, π)
+	H_ideal(Ω) = u(Ω + OmegaC) - u(Ω - OmegaC);
+	
+	plot(H_ideal, -π, π,
+		xlabel= " Ω ",
+		ylabel= "Amplitud",
+	)
 end
 
+
+# ╔═╡ 79411da0-79ee-11eb-3f3d-5b00dcffd43c
+md""" Se arma un filtro ideal y su respuesta al impulso."""
+
+# ╔═╡ ece5f452-79ef-11eb-0b5f-8141791cbab8
+md"""Grafico la respuesta al impulso del filtro ideal."""
 
 # ╔═╡ 54934580-73d8-11eb-2211-3f5357c88358
 #La respuestaal impulso de mi Hideal.
@@ -459,16 +532,22 @@ let ns = -40:40
 end
 
 
+# ╔═╡ fbde8120-79ef-11eb-05f7-2def33cc8263
+md""" Grafico mi filtro convolucionado con la ventana con order 87."""
+
 # ╔═╡ 7e90a16e-73d8-11eb-1e23-0b1e366467aa
 #Grafico mi filtro ventaneado.
 begin
-	order = 231;
+	order = 87;
 	ns = range(-(order - 1) / 2; length=order);
 	winds = hamming(order);
 	hs = h_ideal.(ns,OmegaC) .* winds;#<--filtro.
 	stem(0:order-1, hs)
 end
 
+
+# ╔═╡ c4921f20-79ee-11eb-1cc5-99c64e998496
+md"""Se crea el filtro mediante el metodo ventaneo con un order de 87 para tener un retardo menor a 1mS, ademas se la grafica en comparacion con la ideal"""
 
 # ╔═╡ b18648f0-73d8-11eb-2f64-ff6fb23b096a
 #Grafico el filtro obtenido con el pasabajos ideal.
@@ -480,30 +559,34 @@ begin
 	plot!(H_ideal, 0, π)
 end
 
-# ╔═╡ bb5879c0-73d8-11eb-1f5e-9b0297fa50af
-#Grafico la fase de mi filtro.
-
-#plot(fs, angle.(hfs); xlims=(0, π))
+# ╔═╡ ff2934c0-79ee-11eb-05ea-b77dfd7f1a73
+md""" De esta forma obtenemos un filtro FIR, estos filtros desplazan temporalmente a todas las frecuencia por un valor constante, es decir es de fase lineal, como se ve en el siguiente grafico."""
 
 # ╔═╡ 92bed250-75e2-11eb-3e64-d15f6a219026
-plot(fs, unwrap(angle.(hfs)); xlims=(0, π), title= "Fase", label= false)
+plot(fs, unwrap(angle.(hfs)); 
+	xlims=(0, π), ylims= (-22, 0),
+	xlabel= " Ω ",
+	ylabel= "Fase",
+	title= "Fase", label= false)
 
 # ╔═╡ 9fee5cf0-75f8-11eb-0404-cd8ad839260c
-md"""Notar que la fase es lineal """
+md"""Dado que es fase lineal se procede a graficar el retardo de grupo del filtro, al ser la ase lineal la derivada se una constante.
+El retardo de grupo se define como $-\frac{d(Fase(w))}{dw}$"""
 
 # ╔═╡ 2fcff8a0-761d-11eb-12d0-1736a6b45e85
 let
 	fase= unwrap(angle.(hfs));
 	fg = range(0; step=2pi/samples, length=samples-1)
 	#retardo de grupo se define como -d(fase(w))/dw.
-	plot(fg, -diff(fase)/(2π/length(fase)) ; xlims=(0, π), 
+	plot(fg, -diff(fase)/(2π/length(fase)) ; 
+		xlims=(0, π), ylims= (0, 50),
+		xlabel= " Ω ",
+		ylabel= "Retardo",
 		title= "Retardo de grupo", label= false)
 end
 
-# ╔═╡ b40552ae-73d8-11eb-0fa9-333246437734
-#   se define el retardo de grupo coomo tg= -1d(fase(w))/dw
-#pagina 433 oppenheim-willsky
-#plot(fs, derivative(hfs))
+# ╔═╡ 29aa4a30-79f0-11eb-207d-6f7e985947d0
+md""" Se procede a realizar un diagrama de polos y ceros """
 
 # ╔═╡ 6ef5b922-73e3-11eb-0504-652233cd6dda
 let 
@@ -513,7 +596,8 @@ let
 end
 
 # ╔═╡ d08961ee-7550-11eb-0529-513ae044a205
-md""" un sistema FIR es finita en el tiempo y esta definida por sus ceros, es decir no tiene polos enel plano finito salvo en cero."""
+md""" Un sistema FIR es finita en el tiempo y esta definida por sus ceros, es decir no tiene polos en el plano finito salvo z= 0 (es decir para w->-inf).
+Notar que al ser un pasabajos para Z= 1 se no hay ceros, ni en las cercanias, esto se corresponde a w= 0 y frecuencias bajas, es coherente con un pasabajos"""
 
 # ╔═╡ 72acf4c0-73e3-11eb-1975-77a7c0a9c562
 begin
@@ -523,6 +607,9 @@ t_win = m / sr;
 filt_tst = PSD(conv(hs, tst), m, t_win)
 end
 
+
+# ╔═╡ c3f1fca0-79f0-11eb-287e-4909d339ae38
+md""" Se procede a graficar la PSD antes y despues de filtrar la señal con el filtro diseñado"""
 
 # ╔═╡ 7c44b4a0-73e3-11eb-03c4-afb2354639a0
 let
@@ -542,13 +629,7 @@ end
 
 
 # ╔═╡ cc11a150-73e3-11eb-0459-4fedbabe462d
-#=
-#finalmente funcion que me submuestrea y devuelve e. .ogg a frecuencia de muestreo sr/8.
-function reduce_sampleRate(x,fm)
-	M = 8 #44100 Hz a 5512.5 Hz
-	return submuestrear(conv(hs,x),M)
-end
-=#
+md""" Notese que la diferencia que hay en los graficos es en escala logaritmmica por lo que luego de la frecuencia de corte la señal se atenua bastante, pero no es discontinia."""
 
 # ╔═╡ 16be5cc0-7777-11eb-1b8e-b765ed6d37cd
 begin
@@ -575,15 +656,15 @@ md"""
 
 # ╔═╡ 3aa5434e-3ea4-11eb-20aa-b15564d4eb90
 let
-	order= 501
-	snf = specplot(tst; fs=sr, window=hamming(order), title= "sin filtrar" )
-	sf  = specplot(conv(hs, tst); fs=sr, window=hamming(order), title= "Filtrada" )
-	sfg  = specplot(conv(hs, tst); fs=sr, window=hamming(order), title= "Filtrada" )
-	plot(snf,sf)
+	order= 1024
+	snf = specplot(tst; fs=sr, window=hanning(order), title= "sin filtrar" )
+	sf  = specplot(conv(hs, tst); fs=sr, window=hanning(order), title= "Filtrada" )
+	#sfg  = specplot(conv(hs, tst); fs=sr, window=hanning(order), title= "Filtrada" )
+	plot(snf,sf, legend= false)
 end
 
 # ╔═╡ 38c05a80-73e4-11eb-274d-d538d2e3fb65
-
+md""" Se observa que las muestras filtradas efectivamente tienen sus componentes de mayor amplitud por debajo de la frecuencia de corte luego para frecuencias mayores disminuye bastante pero no de forma discontinua."""
 
 # ╔═╡ 982538c4-3e67-11eb-229e-dd2531a540d6
 md"""
@@ -616,18 +697,36 @@ begin
 	#bajarle el overlap paraverlo mas suave	!!!!!	
 end
 
+# ╔═╡ f7de1ba0-79fc-11eb-1fa8-c9f36f88d7ba
+md""" Se proceden a graficar los espectrogramas para cada el orden 2048 es se deduce experimentalmente viendo los gráficos.
+también podemos estimarla con ayuda del paper dado para el TP, en donde proponen un ancho de ventana de 0,37seg. y dado que nuestra frecuencia de muestreo reducida es ~5512Hz se obtiene un ancho en muestras de 2040 muestras, ajustando un poco llegamos a las 2048
+"""
+#=Lafuncion plot no es muy amiga del specplot, se rompe a cadarato, por ello cargar imagenes de los espectrogramas y subirlas.
+let
+	#t_s=1/2322;
+	t_win2=0.37 						#segun elpaper
+	fm=5512.5
+	muestras= t_win2 * fm 				#2040muestras.
+		
+end=#
+
+# ╔═╡ e1906f20-7a00-11eb-3204-2f8cac355516
+md""" el siguiente grafico muestra el espectrograma con el orden 2048 el cual se usara para el resto del trabajo."""
+
 # ╔═╡ 5cc77020-74bc-11eb-154a-277125d7a831
 let
-	order2= 1020
-	order3= order1*2
-	p1= specplot(ssm;fs=sr2,overlap= ovrlp,window=hamming(order1),title= "hamming");
-	p2= specplot(ssm;fs=sr2,overlap= ovrlp,window=ones(order1),title= "rectangular");
 	
-	plot(p1,p2, layout= (1, 2),
+	plot(
+		specplot(ssm;fs=sr2,overlap= 31/32#=ovrlp=#,window=hamming(order1),title= "hamming"),
+		specplot(ssm;fs=sr2,overlap= 31/32#=ovrlp=#,window=rect(order1),title= "rectangular"),
+		layout= (1, 2),
 		xlims= (1, 5),
 		ylims= (0, 1500)
 	)
 end
+
+# ╔═╡ fd9d3860-7a00-11eb-2d95-b5700362c015
+md""" Si se grafica el mismo espectrograma pero con un orden 2 veces mayor, si bien a mayor orden mayor resolución espectral para este trabajo no es necesario dado que impondría mucha carga al programa y gráficamente se ve que tampoco es mucho mejor"""
 
 # ╔═╡ aa6bbab2-7620-11eb-36d0-9b82996620bb
 let
@@ -642,6 +741,9 @@ let
 	)
 end
 
+# ╔═╡ 987a7410-7a01-11eb-1f48-dd5f50a1cd81
+md""" Se grafica los espectrogramas con la mitad del orden utilizado, notar que disminuye la resolucion espectral."""
+
 # ╔═╡ b52628a0-7620-11eb-1dda-65bc93222c5c
 let
 	order2= 1020
@@ -654,16 +756,6 @@ let
 		ylims= (0, 1500)
 	)
 end
-
-# ╔═╡ 116d1c02-750d-11eb-3c2a-19b4e9c04995
-#Lafuncion plot no es muy amiga del specplot, se rompe a cadarato, por ello cargar imagenes de los espectrogramas y subirlas.
-#let
-	#t_s=1/2322;
-#	t_win2=0.37 						#segun elpaper
-#	fm=5512.5
-#	muestras= t_win2 * fm 				#2040muestras.
-		
-#end
 
 # ╔═╡ 6d1698d0-74a7-11eb-15bf-35d2eae0061f
 
@@ -685,6 +777,9 @@ Debemos obtener una matriz de energías `E`, cuyas columnas, al igual que las de
 **Divida al espectrograma en 21 bandas de frecuencias, equiespaciadas en escala logarítmica (es decir, el cociente entre frecuencias de bandas consecutivas debe ser constante). La frecuencia inferior de la primera banda debe ser 300 Hz y la superior de la última, 2 kHz.** 
 """
 
+# ╔═╡ e7793b50-7a01-11eb-35ce-bfc0ff756a76
+md""" Se define un vector separado logarítmicamente entre 300 y 2k, con el que se trabaja en adelante para dividir el espectrograma en 21 bandas."""
+
 # ╔═╡ 5f636b02-3ea4-11eb-3f78-6f693a936992
 fbands= exp.(range(log(300); stop=log(2e3), length=22))
 
@@ -694,15 +789,17 @@ md""" cada frecuencia es igual al anterior multiplicada por el mismo factor """
 # ╔═╡ 6813ab40-7513-11eb-11b4-8f3040b56c91
 fbands[2: end] ./ fbands[1: end - 1] 		#coeficientes constantes.
 
+# ╔═╡ 22d04590-7a02-11eb-3fe2-ab6b63005994
+md""" Esra banda va de 300Hz a 2kHz, tiene 22 frecuencias para 21 bandas"""
+
 # ╔═╡ a46234e0-7513-11eb-21d2-8592c8fec31d
 fbands[[1, end]]  				#frecuenciasinferiores  y superiores acordes.
 
 # ╔═╡ aeb41d00-7513-11eb-0980-9b6250c020af
 length(fbands)
 
-# ╔═╡ c5806300-7549-11eb-2268-0fb465e3126a
-#div_fil = floor.(Int, range(1; stop=10^log(2048), length=22))
-
+# ╔═╡ 61106600-7a02-11eb-256f-d724de274557
+md"""Se genera una matriz **S** quien posee las sucesivas DFT dada por la función stft() en donde se tomaran la primer mitad de las filas."""
 
 # ╔═╡ e6a127a0-751b-11eb-34ac-418d1ad01639
 begin
@@ -710,14 +807,17 @@ begin
 	#floor(Int, (31/32)*length(hamming(order1)))
 	#2048*(31/32) fui bajando el overlap para que me quede mejor la huella.
 	s= stft(ssm; overlap= ovlp, window= hamming(order1), nfft= order1);
-	S=s[1:div(2048, 2), :]
+	S=s[1:div(2048, 2), :];
 end
+
+# ╔═╡ d3fe3e30-7a02-11eb-25ea-85d66902a047
+md""" Luego entonces se genera un vector similar con las posiciones correspondiente a cada frecuencia del vector de frecuencias definido anteriormente, los cuales se necesitan para operar con la matriz **S**"""
 
 # ╔═╡ 46b25e4e-7609-11eb-3ef8-bff9a5a5898d
 begin
 	#fil, col = size(s);
 	fil, col = size(S)
-	div_fil_f = floor.(Int, (fil#=div(fil,2)=# .* fbands[1:end]) ./ (sr2/2))
+	div_fil_f = floor.(Int, (fil.* fbands[1:end]) ./ (sr2/2))
 end
 
 
@@ -763,12 +863,12 @@ end
 #imposible!!!! no puedo no puedo!!! quiero armar con los vectores una matriz!!!!
 =#
 
+# ╔═╡ 0fa90dc0-7a03-11eb-3301-5166ff8dfc61
+md""" Finalmente se genera una función que para cada fila "m" y columna "n" retorna el valor de la energía correspondiente a una matriz de energía generada a partir de la matriz **S** """
+
 # ╔═╡ 4a342420-75df-11eb-35be-0bc9cc550163
 #para cada banda m en s calculla la media de los abs ^2 de las filas correspondientes.
 E(m,n)= mean( abs.( S[div_fil_f[m]:div_fil_f[m+1], n] ).^2 )
-
-# ╔═╡ 10881de0-75f7-11eb-0aaa-8b0de38fd5f5
-
 
 # ╔═╡ 8deaf928-3e67-11eb-0327-31e0f74de814
 md"""
@@ -782,6 +882,12 @@ En palabras, $H[m, n]$ es 1 si la diferencia de energía entre las bandas $m$ y 
 #### Ejercicio 8)
 
 **Implemente el algoritmo de extracción de características, calculando la huella. Debido al efecto borde, $H[m, n]$ debería resultar una matriz de 20 filas. Ejecute el algoritmo sobre un segmento de audio y muestre una imagen de la huella digital acústica obtenida.**
+"""
+
+# ╔═╡ 198f8280-7a06-11eb-2a86-d16bc498aaef
+md""" Para construir la **H**, la matriz huella, se hace uso de la función _E()_, generando una subfunción _bern()_ que según el criterio de diferencias de energías mostrado en la definición de **H[m,n]** retornara _1_ si la condición se cumple _2_ en caso contrario.
+Luego entonces a partir de la subfunción mencionada se genera una función _H()_ que tornara la matriz de huella.
+
 """
 
 # ╔═╡ 6476e9fc-3ea4-11eb-3873-b765108f4bab
@@ -804,13 +910,17 @@ begin
 end
 
 # ╔═╡ 2435f260-7618-11eb-1b22-d3eda517d5f0
-#H = zeros(...)
-#for n in 2:1:cols-1
-#    H[m, n] = bern...
-#end
+md""" 
+Usando la función H() se genera a modo de prueba la huella para las muestras de "Pink.ogg"
+"""
 
 # ╔═╡ d33d59f0-75f6-11eb-2c74-1b8e3be2f9c1
 huella= H(S)
+
+# ╔═╡ feb5ec9e-7a06-11eb-034a-c169e0377755
+md""" 
+Para verlo mejor se grafica la matriz en escala de grises pudiendo ver una imagen con la huella obtenida.
+"""
 
 # ╔═╡ 5bf232a0-7568-11eb-302c-a17935859a8a
 plot_huella(h)= Gray.(float.(h));
@@ -878,10 +988,14 @@ end
 """
 
 # ╔═╡ d4bbda22-7797-11eb-1835-ddf37a08cc0f
+md"""
+Como indica el enunciado se procede a juntar todas las funciones definidas anteriormente en una para generar la huella y así poder usarla función en cualquier otra canción en muestreada a 44100Hz.
+Para ello se redefine la función _E_ y _bern()_ creando las funciones _EE_ y _bern2_ las cuales permiten ser usadas más elegante y eficientemente en la función generar_huella().
 
+"""
 
 # ╔═╡ 304f1ef0-7776-11eb-1926-13a4a3e50e26
-#generar_huella(fname::String) = generar_huella(load_audio(fname));
+
 
 # ╔═╡ 76604f60-777e-11eb-2543-09be49dcc4b1
 #Gnero las mismas funciones de antes modificadas para poner usarlas mejor en generar_huella.
@@ -898,21 +1012,28 @@ begin
 	end 
 end
 
+# ╔═╡ bd363c20-7a07-11eb-1a07-a1e3ea91852f
+md"""
+La función _generar_huella()_ debe recibir una canción, pero más adelante esto traería problemas al tener que convertir muestras a canción y luego canción a muestras, por ello se define otra subfunción _generar_huella!(), que hace lo mismo que la anterior pero recibe las muestras de la canción a procesar.
+Entonces generar_huella() usa a generar_huella!() convirtiendo la canción en muestras previamente.
+
+"""
+
 # ╔═╡ 4b0b7360-7776-11eb-1bd5-ddd0c82e9e06
 
 #genera la huella de x.	
-function generar_huella!(x::Vector) 					#debe recibir un vector.
+function generar_huella!(x::Vector) 				    	#debe recibir un vector.
 	
 	xsrsub = reduce_sampleRate(x, sr); 					  #sr=44100 variable global.
 	rsr = sr / 8
 
 	order= 2048
-	ovlp= 1942 		#1827
+	ovlp= 1942 		#Segun lo calculado en el ejercicio 10)           #1827
 
 	s= stft(xsrsub; overlap= ovlp, window= hamming(order), nfft= order);
 	S= s[1:div(order, 2), :] 			#se puede hacer en una linea??
 
-	fbands= exp.(range(log(300); stop=log(2e3), length=22)) #divido en bandas.
+	fbands= exp.(range(log(300); stop=log(2e3), length=22))   #divido en bandas.
 	filS, colS = size(S);
 	div_fil = floor.(Int, (filS .* fbands[1:end]) ./ (rsr/2)) #busco el indice.
 
@@ -931,8 +1052,13 @@ function generar_huella(fname::String )
 	generar_huella!(to_mono(fname))
 end
 
+# ╔═╡ 5795e360-7a08-11eb-0142-31c7502d8428
+md"""
+A modo de prueba se genera nuevamente la huella para _Pink.ogg_ viendo que es similar a la anteriormente mostrada solo que esta vez fue generada a partir de la función generar_huella().
+"""
+
 # ╔═╡ 741304fe-3ea4-11eb-15e8-09908d98ecb3
-hhuella= generar_huella("Pink.ogg")
+hhuella= generar_huella("Pink.ogg");
 
 # ╔═╡ ed9dce70-7785-11eb-27b2-8d22fa913c96
 plot_huella(hhuella)
@@ -945,14 +1071,10 @@ md"""
 **Observe que la cantidad de elementos a guardar en la base de datos se incrementa conforme la longitud de las ventanas del espectrograma inicial disminuye, o el solapamiento entre ventanas se incrementa. Determine el solapamiento entre ventanas del espectrograma para obtener una densidad de aproximadamente 25 elementos por segundo y utilice este valor para el ejercicio siguiente.**
 """
 
-# ╔═╡ 088ca198-3e74-11eb-0cf3-23a983165a0d
-#Segun tengo entendido es algo como muestras/seg=fs/(n*ov)
-#Fs frecuencia sampling
-#n largo de ventana en muestras
-#Ov overlap, si es 50% de n se duplican las muetras por segundo
-
 # ╔═╡ 4df7d760-7796-11eb-2563-932eb8c9fece
-md""" mediante la siguiente funcion se calcula la densidad pedida, de manera de encontrar 25 muestras por segundo segun las columnas de la matriz h, luego con ello se encontró que con un overlap de 1942 y una ventana de 2048 se consigue lo pedido"""
+md""" 
+Mediante la siguiente función se calcula la densidad pedida, de manera de encontrar 25 muestras por segundo según las columnas de la matriz h, luego con ello se encontró que con un overlap de 1942 y una ventana de 2048 se consigue lo pedido.
+"""
 
 # ╔═╡ 7a02bdf0-7793-11eb-3606-9168a11719a4
 #col(H)/(tiempo de la canción[seg])
@@ -976,6 +1098,10 @@ md"""
 
 **Ejecute la función `generar_DB` para confeccionar la base de datos completa de su lista de canciones. Utilice al menos 40 canciones para llenar la base de datos. Puede usar la lista de canciones provista, y/o usar una lista de canciones propia. (Recuerde verificar que la frecuencia de muestreo de sus canciones sea de 44100 Hz).**
 """
+
+# ╔═╡ 8a2d6fe0-7a09-11eb-1946-694ee29e9d86
+md""" 
+Se cargan las muestras del subdirectorio _40songs_ y se usa la función _generar_DB_ provista para generar la base de datos, el cual se utilizara para comparar una dada huella  con las que se encuentran en la base de datos y así poder encontrar la información de la canción que el usuario este buscando."""
 
 # ╔═╡ b91537ac-3ea4-11eb-14d6-d341c535d83e
 begin
@@ -1038,6 +1164,9 @@ begin
 	landmark_to_index(h) = sum(2 .^ (0:19) .* h) + 1
 end;
 
+# ╔═╡ 928af020-7a0b-11eb-325c-81c84be31414
+
+
 # ╔═╡ e9255b8c-3e74-11eb-2960-5d01b0c99b13
 db = generar_DB(songs; dir=songsdir);
 
@@ -1094,6 +1223,17 @@ md"""
 **Evalúe la tasa de aciertos del algoritmo identificando segmentos de duración $T$ con tiempo inicial elegido al azar de canciones elegidas al azar (vea la función `rand`). Las canciones deberán ser las mismas que utilizó para confeccionar la base de datos. Realice la evaluación para 50 segmentos con duración T  entre 5, 10 y 20 segundos cada vez (150 evaluaciones en total) obteniendo la tasa de aciertos en cada caso.**
 """
 
+# ╔═╡ a9b2ac20-7a0b-11eb-13cd-2de6007fc26d
+md""" 
+Para evaluar la tasa de aciertos se usa la función _query_DB()_ en donde para un segmento de "t", tiempo dado se selecciona un canción de forma aleatoria y se le obtienen las muestras a partir de un tiempo inicial aleatorio, luego se le genera la huella a dicho segmento y con _query_DB()_ se hace la búsqueda en la base de datos.
+si este segmento de canción se encuentra en la base de datos retorna _true_ en caso contrario _false_
+.
+"""
+
+# ╔═╡ c970df70-77ac-11eb-384a-9b8a5e2e9547
+md""" 
+Para calcular la tasa de acierto en los tiempos indicado se hace el promedio entre 50 muestras para cada tiempo y será retornado como vector el cual contendrá la media de aciertos correspondientes."""
+
 # ╔═╡ 00da49d0-7602-11eb-31f1-dfe5b07d6349
 
 
@@ -1102,6 +1242,11 @@ md"""
 #### Ejercicio 13)
 
 **Repita el ejercicio 12 sumando ruido a los segmentos de audio. Utilice la función `randn` para generar las muestras de ruido. Evalúe tasa de aciertos para $SNR =0dB$, $10dB$ y $20dB$, mostrando sus resultados en una tabla para 9 combinaciones de longitud temporal y ruido. Nota: $SNR=10 log_{10}(P_X/P_N)$ donde $P_X$ es la potencia media de la señal sin ruido, y $P_N$ es la potencia media del ruido sumado a la señal. Para el cálculo de la potencia media puede utilizar la función `var`, que estima la varianza de una señal, ya que las señales de audio no deberían componente continua o valor medio.**
+"""
+
+# ╔═╡ 746ccbb0-7a0e-11eb-11f0-f107a2b47442
+md""" 
+Para hacer las pruebas con ruido agregado se modificó la función genera en el ejercicio anterior agregando en los argumentos el parámetro "SNR" el cual es cero por defecto, y un parámetro booleano el cual me activa un segmento de Código que agrega el ruido, "noise= false" por defecto, poner en _true_ para agregar ruido.
 """
 
 # ╔═╡ 841f7430-77b2-11eb-180b-11a3ec034424
@@ -1135,20 +1280,19 @@ function is_song(t; snr=0, noise::Bool=false)#keyword arguments
 	return song == songs[query_DB(db, generar_huella!(x) )]
 end
 
-# ╔═╡ c970df70-77ac-11eb-384a-9b8a5e2e9547
-is_song(50)
-
 # ╔═╡ b99bea60-7601-11eb-3f06-ef522296b39d
  [mean(is_song(t) for _ in 1:50 )
 		for t 	in (5, 10, 20)]
 
 # ╔═╡ 8fe96ca0-77ce-11eb-1d58-27201d27fc2f
-
+md""" 
+Luego se calculan para 9 tiempos predefinidos las  tasas de aciertos en las mismas condiciones del ejercicio anterior.
+"""
 
 # ╔═╡ 129267b0-77b6-11eb-2fa3-5914fd885d43
-#esto se toma su tiempo, descomentarlo para las pruebas 
-#[mean(is_song(t; snr= algo, noise=true) for _ in 1:20 )
-		for t in (4.5, 7, 12, 15, 17, 20, 23, 25, 27), 
+#esto se toma su tiempo, descomentarlo para las pruebas, mejor tiempo 22minutos 50 segmentos.
+[mean(is_song(t; snr= algo, noise=true) for _ in 1:50 )
+		for t in (3.5, 7, 12, 14.9, 17, 15.6, 23.5, 24, 24.7), 
 			algo in (0, 10, 20)
 		]
 
@@ -1158,7 +1302,7 @@ is_song(50)
 # ╔═╡ 713783c0-77bd-11eb-2b34-17a3651f41c9
 md""" 
 
-a continuacion se muestras distintas tablas las cuales contienen las probabilidades de acierto experimentales con ruido agregado de 0dB, 10dB y 20dB.
+a continuacion se muestras distintas tablas las cuales contienen las tasas de acierto  con ruido agregado de 0dB, 10dB y 20dB.
 
 Tabla para 50 segmentos con ruidos para t= 5,10 y 20 segundos.
 
@@ -1170,8 +1314,58 @@ Tabla para 50 segmentos con ruidos para t= 5,10 y 20 segundos.
 
 
 
-Matriz para 1 segmento con ruidos para t= 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 segundos.
+Matriz para 50 segmento con ruidos, para t= 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 segundos.
 
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5 |0.86  |1.0  |1.0
+|7   |0.96  |1.0  |1.0
+|12  |0.98  |1.0  |1.0
+|15  |0.98  |1.0  |1.0
+|17  |1.0   |1.0  |1.0
+|20  |1.0   |1.0  |1.0
+|23  |0.98  |1.0  |1.0
+|25  |1.0   |1.0  |1.0
+|27  |1.0   |1.0  |1.0
+
+Matriz con ruidos para 50 segmentos de t: 3.5, 7, 12, 14.9, 17, 15.6, 23.5, 24y 24.7 segundos.
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|3,5 |0.88  |1.0  |1.0
+|7   |0.92  |1.0  |1.0
+|12  |1.0   |1.0  |1.0
+|14,9|0.98  |1.0  |1.0
+|17  |0.98  |1.0  |1.0
+|15,6|1.0   |1.0  |1.0
+|23,5|1.0   |1.0  |1.0
+|24  |1.0   |1.0  |1.0
+|24,7|1.0   |1.0  |1.0
+
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|3,5   |0.92 |1.0 |1.0
+|7     |0.98 |1.0 |1.0
+|12    |0.98 |1.0 |1.0
+|14,9  |1.0  |1.0 |1.0
+|17    |0.98 |1.0 |1.0
+|15,6  |1.0  |1.0 |1.0
+|23,5  |0.98 |1.0 |1.0
+|24    |1.0  |1.0 |1.0
+|24,7  |1.0  |1.0 |1.0
+
+Notar que en todas las mediciones se obtuvieron aciertos de ~100% ecepto para el ruido.
+Dado que con 0dB es cuando hay mas ruido sera mas complicado generar una huella que pueda ser encontrada en la base de datos, aun asi la tasa de aciertos para 0dB suele ser buena, mayor al 80%.
+
+
+"""
+
+# ╔═╡ 612586c0-7a25-11eb-247f-8f55aa84cb91
+add_noise(tst,0)|>sound
+
+# ╔═╡ 8274ebc0-7a13-11eb-2632-3f936f3eb7e2
+#=
 |T[seg]| 0dB |10dB|20dB|
 |:-:   |:--: |:--:|:--:|
 |4,5|1.0|  1.0|  1.0|
@@ -1184,7 +1378,7 @@ Matriz para 1 segmento con ruidos para t= 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 se
 |25 |1.0|  1.0|  1.0|
 |27 |1.0|  1.0|  1.0|
 
-La siguiente tabla muestra las probabilidades para 5 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+La siguiente tabla muestra las tasas de acierto para 5 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
 
 |T[seg]| 0dB |10dB|20dB|
 |:-:   |:--: |:--:|:--:|
@@ -1198,7 +1392,7 @@ La siguiente tabla muestra las probabilidades para 5 segmentos con duracion de s
 |25 |1.0  |1.0  |1.0
 |27 |1.0  |1.0  |1.0
 
-La siguiente tabla muestra las probabilidades para 10 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+La siguiente tabla muestra las tasas de acierto para 10 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
 
 
 |T[seg]| 0dB |10dB|20dB|
@@ -1214,7 +1408,7 @@ La siguiente tabla muestra las probabilidades para 10 segmentos con duracion de 
 |27 |1.0  |1.0  |1.0
 
 
-La siguiente tabla muestra las probabilidades para 20 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
+La siguiente tabla muestra las tasas de acierto para 20 segmentos con duracion de segmentos t = 4.5, 7, 12, 15, 17, 20, 23, 25 y 27 correspondientes.
 
 
 |T[seg]| 0dB |10dB|20dB|
@@ -1230,10 +1424,21 @@ La siguiente tabla muestra las probabilidades para 20 segmentos con duracion de 
 |27 |1.0  |1.0  |1.0
 
 
-dado que el tiempo de procesamiento aumenta a medida que se aumentan los segmentos y los tiempos, hacer las pruebas anteriores con 50 segmentos puede llevar horas, por lo que no se hace la prueba.
+con 30 segmentos:
 
+|T[seg]| 0dB |10dB|20dB|
+|:-:   |:--: |:--:|:--:|
+|4,5 |0.833333  |1.0  |0.966667
+|7   |0.833333  |1.0  |1.0
+|12  |0.966667  |1.0  |1.0
+|15  |1.0       |1.0  |1.0
+|17  |1.0       |1.0  |1.0
+|20  |1.0       |1.0  |1.0
+|23  |1.0       |1.0  |1.0
+|25  |1.0       |1.0  |1.0
+|27  |0.966667  |1.0  |1.0
+=#
 
-"""
 
 # ╔═╡ 6d76f2f2-3e67-11eb-04dc-0580a2072dda
 md"""
@@ -1316,118 +1521,146 @@ Bajo el primer criterio se declararía ganador al ID 7 dado que aparece mayor ca
 # ╟─09062294-3e5f-11eb-176f-dfcbf841f111
 # ╟─8f1394ee-3e63-11eb-0093-e75468460dc5
 # ╟─7c04611e-3e61-11eb-0aa5-eb97132ace53
+# ╟─82bdb9f0-7a26-11eb-0df3-0553dd890af1
 # ╟─adc46380-3e63-11eb-2422-5bfe1b5052ba
-# ╟─a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
+# ╠═a3bf22c4-3ea3-11eb-3d3d-adfdfc171c33
+# ╟─54e21790-7a14-11eb-14f3-9bf2cbf17fe6
 # ╠═d132a762-3ea3-11eb-3494-692576a31f34
+# ╠═aeea5400-794c-11eb-35b4-b763196181af
+# ╟─4612d502-7961-11eb-0a80-11d812178ad8
 # ╠═28c5ed26-3e6b-11eb-1d44-01e209b92f00
-# ╠═92649f90-73cd-11eb-0df8-4958d753607d
+# ╟─92649f90-73cd-11eb-0df8-4958d753607d
 # ╠═a2fa88b0-73cd-11eb-1336-9fbf72b0ddd8
-# ╠═a7727c3e-73cd-11eb-3bdc-8dd64b6b43ad
+# ╟─b65f8000-7962-11eb-1ba6-213e0aac1846
+# ╟─a7727c3e-73cd-11eb-3bdc-8dd64b6b43ad
 # ╟─a83a1200-73cd-11eb-353c-751703d316cd
 # ╟─a56414d0-7621-11eb-0140-e57ff8c679ff
 # ╟─1e7678f0-73ce-11eb-02a6-053cc2e84b2f
 # ╠═202f4c80-73ce-11eb-2b03-1dc6c7240993
 # ╟─b9ad22ac-3e67-11eb-35e1-7f4579b64838
+# ╟─2b430db0-7963-11eb-3585-893f8168af1c
 # ╠═4fc8c804-3ea4-11eb-3e97-eb6709f1c0aa
-# ╠═56f4c0b0-73ce-11eb-09fd-fba3b409e4d9
+# ╟─56f4c0b0-73ce-11eb-09fd-fba3b409e4d9
 # ╟─d987dc10-7621-11eb-26d9-d148f796fc11
 # ╟─7776221e-73ce-11eb-003c-857b22a7e7c1
 # ╠═bffcb902-73ce-11eb-31c9-05d7c512a3d0
 # ╟─b60ae59e-3e67-11eb-123e-11c0cba7d09e
+# ╟─de8b8c70-7964-11eb-3127-d3731697c053
 # ╠═4e904a84-3ea4-11eb-0c12-b1fccd5f7036
 # ╟─98aab180-73cf-11eb-092d-cb520eba3c36
-# ╠═8972ef20-77bc-11eb-192d-0732917782b0
 # ╠═d61f59b0-73d1-11eb-0edb-938b1f3defa2
 # ╟─f538d140-73d2-11eb-2248-abda76c139a5
-# ╠═d279d480-73d5-11eb-3cc8-310c3d312bd2
+# ╟─c0621930-796e-11eb-1a94-a118feca6e6b
+# ╟─1ae45790-7a1b-11eb-03b9-a3212ee88756
 # ╟─b2025250-3e67-11eb-39a2-73292bbf17c9
 # ╟─4c56bc6c-3ea4-11eb-01e7-7b26c1d054f0
 # ╟─3936fb00-73ed-11eb-25cd-812cdcf591fd
 # ╠═c3a33cae-73d7-11eb-2707-d3604f680c0c
-# ╠═1500ddb0-73e7-11eb-024b-1f68d5ac7525
-# ╠═5fef73e0-73e7-11eb-36e6-d1a47f2c456c
+# ╟─1500ddb0-73e7-11eb-024b-1f68d5ac7525
+# ╟─b07a0860-79d3-11eb-197f-4ba2019e2521
+# ╟─5fef73e0-73e7-11eb-36e6-d1a47f2c456c
 # ╠═27b2c6d0-73d8-11eb-33d5-e779bb4bf27d
+# ╠═79411da0-79ee-11eb-3f3d-5b00dcffd43c
+# ╠═ece5f452-79ef-11eb-0b5f-8141791cbab8
 # ╠═54934580-73d8-11eb-2211-3f5357c88358
 # ╠═340d0210-73d8-11eb-323c-e9501bdf682f
+# ╟─fbde8120-79ef-11eb-05f7-2def33cc8263
 # ╠═7e90a16e-73d8-11eb-1e23-0b1e366467aa
+# ╟─c4921f20-79ee-11eb-1cc5-99c64e998496
 # ╠═b18648f0-73d8-11eb-2f64-ff6fb23b096a
-# ╠═bb5879c0-73d8-11eb-1f5e-9b0297fa50af
+# ╠═ff2934c0-79ee-11eb-05ea-b77dfd7f1a73
 # ╠═92bed250-75e2-11eb-3e64-d15f6a219026
-# ╠═9fee5cf0-75f8-11eb-0404-cd8ad839260c
+# ╟─9fee5cf0-75f8-11eb-0404-cd8ad839260c
 # ╠═2fcff8a0-761d-11eb-12d0-1736a6b45e85
-# ╠═b40552ae-73d8-11eb-0fa9-333246437734
+# ╟─29aa4a30-79f0-11eb-207d-6f7e985947d0
 # ╠═6ef5b922-73e3-11eb-0504-652233cd6dda
 # ╟─d08961ee-7550-11eb-0529-513ae044a205
 # ╠═72acf4c0-73e3-11eb-1975-77a7c0a9c562
+# ╟─c3f1fca0-79f0-11eb-287e-4909d339ae38
 # ╠═7c44b4a0-73e3-11eb-03c4-afb2354639a0
-# ╠═cc11a150-73e3-11eb-0459-4fedbabe462d
+# ╟─cc11a150-73e3-11eb-0459-4fedbabe462d
 # ╠═16be5cc0-7777-11eb-1b8e-b765ed6d37cd
 # ╟─af4f3da4-3e67-11eb-3cc6-3378e0c12667
 # ╠═3aa5434e-3ea4-11eb-20aa-b15564d4eb90
-# ╠═38c05a80-73e4-11eb-274d-d538d2e3fb65
+# ╟─38c05a80-73e4-11eb-274d-d538d2e3fb65
 # ╟─982538c4-3e67-11eb-229e-dd2531a540d6
 # ╠═f3971b40-73ea-11eb-3f2e-dd3a4443b9ab
 # ╠═f906add0-74b1-11eb-156d-9b7c54bfd2ba
 # ╠═39f5fc86-3ea4-11eb-37f3-25feb7d2aee6
+# ╟─f7de1ba0-79fc-11eb-1fa8-c9f36f88d7ba
+# ╟─e1906f20-7a00-11eb-3204-2f8cac355516
 # ╠═5cc77020-74bc-11eb-154a-277125d7a831
-# ╠═aa6bbab2-7620-11eb-36d0-9b82996620bb
-# ╠═b52628a0-7620-11eb-1dda-65bc93222c5c
-# ╠═116d1c02-750d-11eb-3c2a-19b4e9c04995
+# ╟─fd9d3860-7a00-11eb-2d95-b5700362c015
+# ╟─aa6bbab2-7620-11eb-36d0-9b82996620bb
+# ╟─987a7410-7a01-11eb-1f48-dd5f50a1cd81
+# ╟─b52628a0-7620-11eb-1dda-65bc93222c5c
 # ╠═6d1698d0-74a7-11eb-15bf-35d2eae0061f
 # ╟─9309e284-3e67-11eb-1ab2-612f6c748c3b
+# ╟─e7793b50-7a01-11eb-35ce-bfc0ff756a76
 # ╠═5f636b02-3ea4-11eb-3f78-6f693a936992
 # ╟─59fddd50-7513-11eb-1f17-07ef0c9f45f0
 # ╠═6813ab40-7513-11eb-11b4-8f3040b56c91
+# ╟─22d04590-7a02-11eb-3fe2-ab6b63005994
 # ╠═a46234e0-7513-11eb-21d2-8592c8fec31d
 # ╠═aeb41d00-7513-11eb-0980-9b6250c020af
-# ╠═c5806300-7549-11eb-2268-0fb465e3126a
+# ╟─61106600-7a02-11eb-256f-d724de274557
 # ╠═e6a127a0-751b-11eb-34ac-418d1ad01639
+# ╟─d3fe3e30-7a02-11eb-25ea-85d66902a047
 # ╠═46b25e4e-7609-11eb-3ef8-bff9a5a5898d
 # ╟─7fda0ee0-752c-11eb-2b7d-5bba9b2a3592
 # ╟─8a696ed0-7524-11eb-0764-214ebea3d1e7
+# ╟─0fa90dc0-7a03-11eb-3301-5166ff8dfc61
 # ╠═4a342420-75df-11eb-35be-0bc9cc550163
-# ╠═10881de0-75f7-11eb-0aaa-8b0de38fd5f5
 # ╟─8deaf928-3e67-11eb-0327-31e0f74de814
+# ╟─198f8280-7a06-11eb-2a86-d16bc498aaef
 # ╠═6476e9fc-3ea4-11eb-3873-b765108f4bab
-# ╠═2435f260-7618-11eb-1b22-d3eda517d5f0
+# ╟─2435f260-7618-11eb-1b22-d3eda517d5f0
 # ╠═d33d59f0-75f6-11eb-2c74-1b8e3be2f9c1
+# ╟─feb5ec9e-7a06-11eb-034a-c169e0377755
 # ╠═5bf232a0-7568-11eb-302c-a17935859a8a
 # ╠═42c730b0-7625-11eb-1c4e-6b516c1eb2e7
 # ╟─7b0ea820-7771-11eb-2c41-15bf560369ab
 # ╟─89743a62-3e67-11eb-209e-9b1f3cc84e34
-# ╠═d4bbda22-7797-11eb-1835-ddf37a08cc0f
-# ╠═304f1ef0-7776-11eb-1926-13a4a3e50e26
+# ╟─d4bbda22-7797-11eb-1835-ddf37a08cc0f
+# ╟─304f1ef0-7776-11eb-1926-13a4a3e50e26
 # ╠═76604f60-777e-11eb-2543-09be49dcc4b1
+# ╟─bd363c20-7a07-11eb-1a07-a1e3ea91852f
 # ╠═d4179090-77a7-11eb-3c1b-4da6e8152c16
 # ╠═4b0b7360-7776-11eb-1bd5-ddd0c82e9e06
+# ╟─5795e360-7a08-11eb-0142-31c7502d8428
 # ╠═741304fe-3ea4-11eb-15e8-09908d98ecb3
 # ╠═ed9dce70-7785-11eb-27b2-8d22fa913c96
 # ╟─855a7d2e-3e67-11eb-0f46-a5c786d5caf3
-# ╠═088ca198-3e74-11eb-0cf3-23a983165a0d
 # ╟─4df7d760-7796-11eb-2563-932eb8c9fece
 # ╠═7a02bdf0-7793-11eb-3606-9168a11719a4
 # ╠═c19daa60-7795-11eb-03a6-d134602f316a
 # ╠═e66049e2-7793-11eb-0560-1189121d97f9
 # ╟─81717fc8-3e67-11eb-05fc-5bde46597f8a
+# ╟─8a2d6fe0-7a09-11eb-1946-694ee29e9d86
 # ╠═b91537ac-3ea4-11eb-14d6-d341c535d83e
 # ╟─73333e92-3e85-11eb-26b6-7f0309ef2ee9
 # ╟─feb5d512-3e85-11eb-0116-29e4d9539595
 # ╠═0cf7ba9c-3e74-11eb-18e2-c38aa20f9e9a
+# ╠═928af020-7a0b-11eb-325c-81c84be31414
 # ╠═e9255b8c-3e74-11eb-2960-5d01b0c99b13
 # ╠═5d0a5800-779a-11eb-2f2c-335d6f94ef06
 # ╟─7c7c1424-3e67-11eb-1da0-5dbad0171b20
 # ╠═415e32e6-3e76-11eb-17fa-23bd653fb975
 # ╟─76ce23dc-3e67-11eb-0be0-91b6781840fb
+# ╟─a9b2ac20-7a0b-11eb-13cd-2de6007fc26d
 # ╠═7d82ea60-779b-11eb-2e75-8997f2c88b53
-# ╠═c970df70-77ac-11eb-384a-9b8a5e2e9547
+# ╟─c970df70-77ac-11eb-384a-9b8a5e2e9547
 # ╠═b99bea60-7601-11eb-3f06-ef522296b39d
 # ╠═00da49d0-7602-11eb-31f1-dfe5b07d6349
 # ╟─7229577a-3e67-11eb-0c71-f383056175d1
+# ╟─746ccbb0-7a0e-11eb-11f0-f107a2b47442
 # ╠═841f7430-77b2-11eb-180b-11a3ec034424
 # ╠═8fe96ca0-77ce-11eb-1d58-27201d27fc2f
 # ╠═129267b0-77b6-11eb-2fa3-5914fd885d43
 # ╟─7b6294de-77bb-11eb-2111-01df80d418e5
 # ╟─713783c0-77bd-11eb-2b34-17a3651f41c9
+# ╠═612586c0-7a25-11eb-247f-8f55aa84cb91
+# ╟─8274ebc0-7a13-11eb-2632-3f936f3eb7e2
 # ╠═6d76f2f2-3e67-11eb-04dc-0580a2072dda
 # ╠═e8200592-3e7a-11eb-0711-ddf863314bee
 # ╟─685698fa-3e67-11eb-2698-937dd4801b5c
